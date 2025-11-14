@@ -8,10 +8,10 @@ modificar os vínculos individualizados.
 
 ## 👥 Integrantes
 
--   **AntoniaTurcatto**
--   **Tássia J. M. Machado**
--   **Kauany da Costa**
--   **Helen Muniz**
+-   [AntoniaTurcatto](https://github.com/AntoniaTurcatto)
+-   [Tássia J. M. Machado](https://github.com/machadotassia1-max)
+-   [Kauany da Costa](https://github.com/kauanycosta)
+-   [Helen Muniz](https://github.com/helenzinha661)
 
 ## 🎯 Objetivo do Projeto
 
