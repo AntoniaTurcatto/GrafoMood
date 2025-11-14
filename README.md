@@ -8,9 +8,9 @@ modificar os vínculos individualizados.
 
 ## 👥 Integrantes
 
--   **AntoniaTurcatto**\
--   **Tássia J. M. Machado**\
--   **Kauany da Costa**\
+-   **AntoniaTurcatto**
+-   **Tássia J. M. Machado**
+-   **Kauany da Costa**
 -   **Helen Muniz**
 
 ## 🎯 Objetivo do Projeto
@@ -51,7 +51,7 @@ Permite verificar se dois personagens estão conectados direto ou indiretamente.
 ## 🛠️ Escolhas Técnicas
 
 -   **Estrutura do grafo:**
-    -   Grafo orientado (as relações têm direção)\
+    -   Grafo orientado (as relações têm direção)
     -   Grafo valorado (arestas possuem peso representando intensidade
         do vínculo)
 -   **Representação adotada:**
@@ -65,9 +65,3 @@ O sistema exporta o grafo no formato compatível com Graphviz, tornando
 possível gerar visualizações como:
 
     dot -Tpng grafo.dot -o grafo.png
-
-##  Observações Finais
-
-Este projeto aplica conceitos fundamentais de Estrutura de Dados com
-foco em grafos, permitindo explorar técnicas de representação, percursos
-e manipulação dinâmica de estruturas conectadas.
