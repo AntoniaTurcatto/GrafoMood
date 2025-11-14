@@ -22,25 +22,23 @@ vínculos por meio de operações em um grafo orientado e valorado.
 ## ⚙️Funcionalidades
 
 ###  Criar e gerenciar personagens
-
--   Adicionar novos personagens ao grafo\
--   Excluir personagens\
+-   Adicionar novos personagens ao grafo
+-   Excluir personagens
 -   Listar todos os vértices existentes
 
 ###  Conexões entre personagens
-
--   Criar uma relação orientada entre dois personagens\
--   Remover uma conexão existente\
+-   Criar uma relação orientada entre dois personagens
+-   Remover uma conexão existente
 -   Atualizar o peso (força do vínculo)
 
 ###  Ações modificadoras de vínculo
-
 -   Aplicar uma ação realizada por um personagem que afeta seus
-    relacionamentos\
+    relacionamentos
 -   A modificação pode alterar pesos das arestas relacionadas
+-   Peso base da ação _X_  peso do vínculo com o emissor
   
 ###   Salvar grafo em arquivo `.dot`
-Representação visual do grafo usando Graphviz.\
+Representação visual do grafo usando Graphviz.
 As cores das conexões ilustram o tipo e intensidade dos vínculos.
 
 ###   Carregar grafo de arquivo
