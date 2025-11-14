@@ -15,9 +15,10 @@ modificar os vínculos individualizados.
 
 ## 🎯 Objetivo do Projeto
 
-Criar uma ferramenta que represente personagens como vértices e suas
-relações como arestas, permitindo visualizar, alterar e analisar esses
-vínculos por meio de operações em um grafo orientado e valorado.
+Criar uma ferramenta que represente personagens e suas
+relações, permitindo visualizar, alterar e analisar esses
+vínculos por meio de operações em um grafo orientado e valorado. 
+Também possibilitar realizar ações em rede que afetam os vínculos e causam outas ações em cascata.
 
 ## ⚙️Funcionalidades
 
