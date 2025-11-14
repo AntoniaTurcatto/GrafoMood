@@ -22,34 +22,33 @@ vínculos por meio de operações em um grafo orientado e valorado.
 ## ⚙️Funcionalidades
 
 ###  Criar e gerenciar personagens
--   Adicionar novos personagens ao grafo
+-   Adicionar novos personagens 
 -   Excluir personagens
 -   Listar todos os vértices existentes
 
 ###  Conexões entre personagens
 -   Criar uma relação orientada entre dois personagens
 -   Remover uma conexão existente
--   Atualizar o peso (força do vínculo)
+-   Atualizar o peso do vínculo, simbolizando a relação da origem para com o destino
 
 ###  Ações modificadoras de vínculo
 -   Aplicar uma ação realizada por um personagem que afeta seus
     relacionamentos
 -   A modificação pode alterar pesos das arestas relacionadas
 -   Peso base da ação _X_  peso do vínculo com o emissor
+-   Uma ação pode gerar outras ações
   
 ###   Salvar grafo em arquivo `.dot`
-Representação visual do grafo usando Graphviz.
-As cores das conexões ilustram o tipo e intensidade dos vínculos.
+Representação visual do estado atual do grafo usando Graphviz.
+As cores das conexões ilustram o tipo e intensidade dos vínculos a partir de um personagem.
 
 ###   Carregar grafo de arquivo
-Permite restaurar um grafo previamente salvo.
+Permite restaurar um grafo previamente salvo em um arquivo.
     
 ###  Verificar conexão entre dois personagens
 Permite verificar se dois personagens estão conectados direto ou indiretamente.
 
-
 ## 🛠️ Escolhas Técnicas
-
 -   **Estrutura do grafo:**
     -   Grafo orientado (as relações têm direção)
     -   Grafo valorado (arestas possuem peso representando intensidade
@@ -60,7 +59,6 @@ Permite verificar se dois personagens estão conectados direto ou indiretamente.
     -   BFS / DFS
 
 ##  Formato de Saída `.dot`
-
 O sistema exporta o grafo no formato compatível com Graphviz, tornando
 possível gerar visualizações como:
 
