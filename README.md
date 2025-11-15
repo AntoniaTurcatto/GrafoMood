@@ -20,7 +20,7 @@ relações, permitindo visualizar, alterar e analisar esses
 vínculos por meio de operações em um grafo orientado e valorado. 
 Também possibilitar realizar ações em rede que afetam os vínculos e causam outas ações em cascata.
 
-### 🤝 Como contribuir
+## 🤝 Como contribuir
 - camel_case
 - Sufixo de funções que manipulam o grafo devem terminar com _rd_
 - Todos os structs declarados logo após os #include
