@@ -69,6 +69,11 @@ bool ler_texto_stdin(char buffer[]);
 
 bool personagem_valido(unsigned int id, RedeConexao *rd);
 
+/// funções de remoção 
+bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd);
+bool remove_personagem_rd(RedeConexao *rd, unsigned int idrem);
+
+
 int main(){
     return 0;
 }
@@ -188,4 +193,101 @@ bool personagem_valido(unsigned int id, RedeConexao *rd){
         pdest = pdest->prox;
     }
     return presente;
+}
+
+bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd){
+    Conexao *ant = NULL, *atual;
+
+    if(orig == NULL || rd == NULL)
+        return false;
+
+    if(!personagem_valido(iddest, rd))
+        return false;
+
+    atual = orig->desc_conexoes.prim;
+
+    while(atual != NULL){
+        if(atual->id_personagem == iddest){
+
+            // removendo primeiro item da lista
+            if(ant == NULL){
+                orig->desc_conexoes.prim = atual->prox_conexao;
+
+                if(orig->desc_conexoes.quant_conex == 2)
+                    orig->desc_conexoes.ult = NULL;
+            }
+            else{
+                ant->prox_conexao = atual->prox_conexao;
+
+                if(atual == orig->desc_conexoes.ult)
+                    orig->desc_conexoes.ult = ant;
+            }
+
+    free(atual);
+    orig->desc_conexoes.quant_conex--;
+    return true;
+}
+
+  ant = atual;
+  atual = atual->prox_conexao;
+}
+
+    return false;
+}
+
+bool remove_personagem_rd(RedeConexao *rd, unsigned int idrem){
+    PersonagNodo *ant = NULL, *atual, *aux;
+
+    if(rd == NULL)
+        return false;
+
+    if(!personagem_valido(idrem, rd))
+        return false;
+
+    atual = rd->raiz;
+
+    //  remover o personagem da lista
+    while(atual != NULL){
+        if(atual->id_personagem == idrem){
+
+            if(ant == NULL){
+                rd->raiz = atual->prox;
+
+                if(rd->quant_personagens == 2)
+                    rd->ult_nodo = NULL;
+            }
+            else{
+                ant->prox = atual->prox;
+
+                if(atual == rd->ult_nodo)
+                    rd->ult_nodo = ant;
+            }
+
+            // liberar as conexões dele
+            Conexao *c = atual->desc_conexoes.prim;
+            Conexao *tmp;
+
+            while(c != NULL){
+                tmp = c->prox_conexao;
+                free(c);
+                c = tmp;
+            }
+
+            free(atual);
+            rd->quant_personagens--;
+            break;
+        }
+
+        ant = atual;
+        atual = atual->prox;
+    }
+
+    // remover conexões dos outros personagens APONTANDO para ele
+    aux = rd->raiz;
+    while(aux != NULL){
+        remove_conexao_rd(aux, idrem, rd);
+        aux = aux->prox;
+    }
+
+    return true;
 }
