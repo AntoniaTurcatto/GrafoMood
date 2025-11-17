@@ -45,15 +45,14 @@ Também possibilitar realizar ações em rede que afetam os vínculos e causam o
     relacionamentos
 -   A modificação pode alterar pesos das arestas relacionadas
 -   Peso base da ação _X_  peso do vínculo com o emissor
--   Após cada ação, os vínculos não interagidos a 5 turnos tem seu peso decaído gradualmente (Pode ser desativado no _grafomood.config_)
+-   Após cada ação, os vínculos não interagidos a 5 turnos tem seu peso decaído gradualmente (Número de turnos pode ser configurado no arquivo _grafomood.config_)
   
 ###  Ações em cascata
--   Inicia desativado, ativa-se no menu do programa ou no arquivo _grafomood.config_
+-   Inicia desativado, ativa-se no menu do programa (é possível tornar o ativamento padrão no menu de configuração, ficando salvo em _grafomood.config_)
 -   Esse sistema pode ser desativado entre as ações
 -   Uma ação pode gerar outras ações
 -   Após cada ação, os vínculos não interagidos a 5 turnos tem seu peso decaído gradualmente.
 -   A probabilidade de geração de uma nova ação decai conforme aumenta a distância do emissor em relação à ação original.
-
   
 ###   Salvar grafo em arquivo `.dot`
 Representação visual do estado atual do grafo usando Graphviz.
