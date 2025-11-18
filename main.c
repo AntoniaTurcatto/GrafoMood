@@ -54,11 +54,18 @@ typedef struct{
     PersonagNodo *ult_nodo;
 }RedeConexao;
 
+/// pai = NULL -> buscado = raiz
 typedef struct{
     PersonagNodo *buscado;
     PersonagNodo *pai;
     bool encontrado;
 }PersonagBuscado;
+
+typedef struct{
+    Conexao *buscado;
+    Conexao *pai;
+    bool encontrado;
+}ConexaoBusc;
 
 RedeConexao* cria_rede();
 
@@ -74,6 +81,7 @@ Personagem cria_personagem();
 bool ler_texto_stdin(char buffer[]);
 
 PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
+ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 
 /// funções de remoção 
 bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd, bool validar);
@@ -201,6 +209,22 @@ PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd){
         }
     }
     return pb;
+}
+
+ConexaoBusc busca_conex(unsigned int id, DescrConexoes p){
+    ConexaoBusc cb;
+    cb.buscado    = p.prim;
+    cb.pai        = NULL;
+    cb.encontrado = false;
+    while(!cb.encontrado && cb.buscado != NULL){
+        if(cb.buscado->id_personagem == id){
+            cb.encontrado = true;
+        } else {
+            cb.pai = cb.buscado;
+            cb.buscado = cb.buscado->prox_conexao;
+        }
+    }
+    return cb;
 }
 
 bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd, bool validar){
