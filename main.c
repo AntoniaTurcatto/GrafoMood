@@ -54,6 +54,12 @@ typedef struct{
     PersonagNodo *ult_nodo;
 }RedeConexao;
 
+typedef struct{
+    PersonagNodo *buscado;
+    PersonagNodo *pai;
+    bool encontrado;
+}PersonagBuscado;
+
 RedeConexao* cria_rede();
 
 bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers);
@@ -67,12 +73,11 @@ Personagem cria_personagem();
 ///função para ler input textual do stdin tratando suas vulnerabilidades inerentes.
 bool ler_texto_stdin(char buffer[]);
 
-bool personagem_valido(unsigned int id, RedeConexao *rd);
+PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
 
 /// funções de remoção 
-bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd);
+bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd, bool validar);
 bool remove_personagem_rd(RedeConexao *rd, unsigned int idrem);
-
 
 int main(){
     return 0;
@@ -155,7 +160,7 @@ bool atualiza_vinculo(PersonagNodo *orig, unsigned int iddest, unsigned int peso
     bool dest_presente = false;
     Conexao *connov;
       
-    if(!personagem_valido(orig->id_personagem, rd) || !personagem_valido(iddest, rd)){
+    if(!busca_personag(orig->id_personagem, rd).encontrado || !busca_personag(iddest, rd).encontrado){
         return false;
     }
 
@@ -180,114 +185,105 @@ bool atualiza_vinculo(PersonagNodo *orig, unsigned int iddest, unsigned int peso
     return true;
 }
 
-bool personagem_valido(unsigned int id, RedeConexao *rd){
-    bool presente = false;
-    PersonagNodo *pdest; 
-    
-    if(rd == NULL)
-        return false;
+PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd){
+    PersonagBuscado pb;
 
-    pdest = rd->raiz;
-    while(pdest != NULL && !presente){
-        presente = pdest->id_personagem == id;
-        pdest = pdest->prox;
+    pb.pai        = NULL;
+    pb.buscado    = rd->raiz;
+    pb.encontrado = false;
+
+    while(!pb.encontrado && pb.buscado != NULL){
+        if(pb.buscado->id_personagem == id){
+            pb.encontrado = true;
+        } else {
+            pb.pai = pb.buscado;
+            pb.buscado  = pb.buscado->prox;
+        }
     }
-    return presente;
+    return pb;
 }
 
-bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd){
+bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd, bool validar){
     Conexao *ant = NULL, *atual;
 
     if(orig == NULL || rd == NULL)
         return false;
 
-    if(!personagem_valido(iddest, rd))
-        return false;
+    if (validar){    
+        if(!busca_personag(iddest, rd).encontrado)
+            return false;
+    }
 
     atual = orig->desc_conexoes.prim;
-
     while(atual != NULL){
         if(atual->id_personagem == iddest){
 
             // removendo primeiro item da lista
             if(ant == NULL){
                 orig->desc_conexoes.prim = atual->prox_conexao;
-
-                if(orig->desc_conexoes.quant_conex == 2)
-                    orig->desc_conexoes.ult = NULL;
             }
             else{
                 ant->prox_conexao = atual->prox_conexao;
 
-                if(atual == orig->desc_conexoes.ult)
+                if(atual == orig->desc_conexoes.ult && orig->desc_conexoes.quant_conex > 2)
                     orig->desc_conexoes.ult = ant;
             }
 
-    free(atual);
-    orig->desc_conexoes.quant_conex--;
-    return true;
-}
+            if(orig->desc_conexoes.quant_conex == 2)
+                orig->desc_conexoes.ult = NULL;
 
-  ant = atual;
-  atual = atual->prox_conexao;
-}
-
+            free(atual);
+            orig->desc_conexoes.quant_conex--;
+            return true;
+        }
+        ant = atual;
+        atual = atual->prox_conexao;
+    }
     return false;
 }
 
 bool remove_personagem_rd(RedeConexao *rd, unsigned int idrem){
-    PersonagNodo *ant = NULL, *atual, *aux;
-
-    if(rd == NULL)
-        return false;
-
-    if(!personagem_valido(idrem, rd))
-        return false;
-
-    atual = rd->raiz;
+    PersonagNodo *aux;
+    PersonagBuscado pb;
 
     //  remover o personagem da lista
-    while(atual != NULL){
-        if(atual->id_personagem == idrem){
-
-            if(ant == NULL){
-                rd->raiz = atual->prox;
-
-                if(rd->quant_personagens == 2)
-                    rd->ult_nodo = NULL;
-            }
-            else{
-                ant->prox = atual->prox;
-
-                if(atual == rd->ult_nodo)
-                    rd->ult_nodo = ant;
-            }
-
-            // liberar as conexões dele
-            Conexao *c = atual->desc_conexoes.prim;
-            Conexao *tmp;
-
-            while(c != NULL){
-                tmp = c->prox_conexao;
-                free(c);
-                c = tmp;
-            }
-
-            free(atual);
-            rd->quant_personagens--;
-            break;
-        }
-
-        ant = atual;
-        atual = atual->prox;
-    }
+    pb = busca_personag(idrem, rd);
+    if(!pb.encontrado)
+        return false;
 
     // remover conexões dos outros personagens APONTANDO para ele
     aux = rd->raiz;
     while(aux != NULL){
-        remove_conexao_rd(aux, idrem, rd);
+        remove_conexao_rd(aux, idrem, rd, false);
         aux = aux->prox;
     }
+
+    //pai NULL = pb.buscado é raiz
+    if(pb.pai == NULL){
+        rd->raiz = pb.buscado->prox;
+
+        if(rd->quant_personagens == 2)
+            rd->ult_nodo = NULL;
+    }
+    else{
+        pb.pai->prox = pb.buscado->prox;
+
+        if(pb.buscado == rd->ult_nodo)
+            rd->ult_nodo = pb.pai;
+    }
+
+    // liberar as conexões dele
+    Conexao *c = pb.buscado->desc_conexoes.prim;
+    Conexao *tmp;
+
+    while(c != NULL){
+        tmp = c->prox_conexao;
+        free(c);
+        c = tmp;
+    }
+
+    free(pb.buscado);
+    rd->quant_personagens--;    
 
     return true;
 }
