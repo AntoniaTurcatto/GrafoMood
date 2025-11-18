@@ -30,38 +30,38 @@ Também possibilitar realizar ações em rede que afetam os vínculos e causam o
 
 ## ⚙️Funcionalidades
 
-###  Criar e gerenciar personagens
+### 🆕 Criar e gerenciar personagens
 -   Adicionar novos personagens 
 -   Excluir personagens
 -   Listar todos os vértices existentes
 
-###  Conexões entre personagens
+### 🧑‍🤝‍🧑 Conexões entre personagens
 -   Criar uma relação orientada entre dois personagens
 -   Remover uma conexão existente
 -   Atualizar o peso do vínculo, simbolizando a relação da origem para com o destino
 
-###  Ações modificadoras de vínculo
+### ↔️ Ações modificadoras de vínculo
 -   Aplicar uma ação realizada por um personagem que afeta seus
     relacionamentos
 -   A modificação pode alterar pesos das arestas relacionadas
 -   Peso base da ação _X_  peso do vínculo com o emissor
--   Após cada ação, os vínculos não interagidos a 5 turnos tem seu peso decaído gradualmente (Número de turnos pode ser configurado no arquivo _grafomood.config_)
+-   Após cada ação, os vínculos não interagidos a 5 turnos tem seu peso decaído gradualmente
   
-###  Ações em cascata
--   Inicia desativado, ativa-se no menu do programa (é possível tornar o ativamento padrão no menu de configuração, ficando salvo em _grafomood.config_)
+### 📡Propagação de ações em cascata
+-   Inicia desativado, ativa-se no menu do programa 
 -   Esse sistema pode ser desativado entre as ações
 -   Uma ação pode gerar outras ações
 -   Após cada ação, os vínculos não interagidos a 5 turnos tem seu peso decaído gradualmente.
 -   A probabilidade de geração de uma nova ação decai conforme aumenta a distância do emissor em relação à ação original.
   
-###   Salvar grafo em arquivo `.dot`
+### ⬇️ Salvar grafo em arquivo `.dot`
 Representação visual do estado atual do grafo usando Graphviz.
 As cores das conexões ilustram o tipo e intensidade dos vínculos a partir de um personagem.
 
-###   Carregar grafo de arquivo
+### 📁 Carregar grafo de arquivo
 Permite restaurar um grafo previamente salvo em um arquivo.
     
-###  Verificar conexão entre dois personagens
+### 🔎 Verificar conexão entre dois personagens
 Permite verificar se dois personagens estão conectados direto ou indiretamente.
 
 ## 🛠️ Escolhas Técnicas
