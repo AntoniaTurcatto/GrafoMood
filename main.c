@@ -16,6 +16,7 @@ Observações:
 #include <stdlib.h>
 #include <locale.h>
 #include <strings.h>
+#include <string.h>
 #include <stdbool.h>
 
 #define MAX_NOME 75
@@ -26,9 +27,11 @@ typedef struct{
     unsigned short int idade;    
 }Personagem;
 
+typedef struct PERS_NODO PersonagNodo;
+
 typedef struct CONEC{
     int peso;
-    int id_personagem;//id para identificar PersonagNodo
+    PersonagNodo *personagem;
     struct CONEC *prox_conexao;//prox conexao do personagem de onde originou a primeira CONEC
 }Conexao;
 
@@ -67,13 +70,13 @@ typedef struct{
     bool encontrado;
 }ConexaoBusc;
 
-RedeConexao* cria_rede();
+RedeConexao cria_rede();
 
 bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers);
 
 /// atualiza o vínculo entre personagens. Caso não exista o vínculo, cria.
 /// retorno: false caso não exista um dos personagens
-bool atualiza_vinculo(PersonagNodo *orig, unsigned int iddest, unsigned int peso, RedeConexao *rd);
+bool atualiza_conexao_rd(PersonagNodo *orig,  PersonagNodo *dest, unsigned int peso, RedeConexao *rd);
 
 Personagem cria_personagem();
 
@@ -84,19 +87,19 @@ PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
 ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 
 /// funções de remoção 
-bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd, bool validar_pers_orig);
-bool remove_personagem_rd(RedeConexao *rd, unsigned int idrem);
+bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig);
+bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado prem);
 
 int main(){
     return 0;
 }
 
-RedeConexao* cria_rede(){
+RedeConexao cria_rede(){
     RedeConexao rede;
     rede.quant_personagens = 0;
     rede.proximo_id = 0;
     rede.raiz = NULL;
-    return &rede;
+    return rede;
 }
 
 Personagem cria_personagem(){
@@ -143,7 +146,7 @@ bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers){
     p_novop = (PersonagNodo*)malloc(sizeof(PersonagNodo)); 
     p_novop->id_personagem = rd->proximo_id++; //incrementa após uso
     p_novop->desc_conexoes.prim = NULL;
-    p_novop->desc_conexoes.prim = NULL;
+    p_novop->desc_conexoes.ult = NULL;
     p_novop->desc_conexoes.quant_conex = 0;
     p_novop->prox = NULL;
     p_novop->info = pers;
@@ -164,35 +167,33 @@ bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers){
     return true;    
 }
 
-bool atualiza_vinculo(PersonagNodo *orig, unsigned int iddest, unsigned int peso, RedeConexao *rd){
-    bool dest_presente = false;
-    ConexaoBusc cb;
+bool atualiza_conexao_rd(PersonagNodo *orig, PersonagNodo *dest, unsigned int peso, RedeConexao *rd){
+    ConexaoBusc conexb;
       
-    if(!busca_personag(orig->id_personagem, rd).encontrado || !busca_personag(iddest, rd).encontrado){
+    if(orig == NULL|| dest == NULL){
         return false;
     }
-    cb = busca_conex(iddest, orig->desc_conexoes);
+    conexb = busca_conex(dest->id_personagem, orig->desc_conexoes);
 
-    if(!cb.encontrado){
-        cb.buscado = (Conexao*)malloc(sizeof(Conexao));
-        cb.buscado->id_personagem = iddest;
-        cb.buscado->prox_conexao  = NULL;
+    if(!conexb.encontrado){
+        conexb.buscado = (Conexao*)malloc(sizeof(Conexao));
+        conexb.buscado->personagem    = dest;
+        conexb.buscado->prox_conexao  = NULL;
 
-        switch(orig->desc_conexoes.quant_conex){
-            case 0:
-                orig->desc_conexoes.prim = cb.buscado;
-                break;
-            case 1: 
-                orig->desc_conexoes.ult = cb.buscado;
+        if(orig->desc_conexoes.quant_conex == 0){
+            orig->desc_conexoes.prim = conexb.buscado;
+        } else {
+            if (orig->desc_conexoes.quant_conex == 1){
                 orig->desc_conexoes.prim->prox_conexao = orig->desc_conexoes.ult;
-                break;
-            default:
-                orig->desc_conexoes.ult->prox_conexao = cb.buscado;
+            } else {
+                orig->desc_conexoes.ult->prox_conexao = conexb.buscado;
+            }
+            orig->desc_conexoes.ult = conexb.buscado;
         }
 
         orig->desc_conexoes.quant_conex++;
     }
-    cb.buscado->peso = peso;
+    conexb.buscado->peso = peso;
     return true;
 }
 
@@ -220,7 +221,11 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p){
     cb.pai        = NULL;
     cb.encontrado = false;
     while(!cb.encontrado && cb.buscado != NULL){
-        if(cb.buscado->id_personagem == id){
+        if(cb.buscado->personagem == NULL){
+            exit(1); // estado indesejado e irreparável
+        }
+
+        if(cb.buscado->personagem->id_personagem == id){
             cb.encontrado = true;
         } else {
             cb.pai = cb.buscado;
@@ -230,20 +235,15 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p){
     return cb;
 }
 
-bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd, bool validar_pers_orig){
-    ConexaoBusc cb;
+bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig){
 
-    if(orig == NULL || rd == NULL)
-        return false;
+    if(orig == NULL || rd == NULL || !cb.encontrado)
+        return false;    
 
-    cb = busca_conex(iddest, orig->desc_conexoes);    
     if (validar_pers_orig){    
-        if(!busca_personag(iddest, rd).encontrado)
+        if(!busca_personag(orig->id_personagem, rd).encontrado)
             return false;
     }
-
-    if(!cb.encontrado)
-        return false;
 
     // removendo primeiro item da lista
     if(cb.pai == NULL){
@@ -264,19 +264,18 @@ bool remove_conexao_rd(PersonagNodo *orig, unsigned int iddest, RedeConexao *rd,
     return true;
 }
 
-bool remove_personagem_rd(RedeConexao *rd, unsigned int idrem){
+bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado pb){
     PersonagNodo *aux;
-    PersonagBuscado pb;
 
-    //  remover o personagem da lista
-    pb = busca_personag(idrem, rd);
     if(!pb.encontrado)
         return false;
 
     // remover conexões dos outros personagens APONTANDO para ele
     aux = rd->raiz;
     while(aux != NULL){
-        remove_conexao_rd(aux, idrem, rd, false);
+        if(aux->id_personagem != pb.buscado->id_personagem){
+            remove_conexao_rd(aux, busca_conex(pb.buscado->id_personagem, aux->desc_conexoes), rd, false);
+        }
         aux = aux->prox;
     }
 
