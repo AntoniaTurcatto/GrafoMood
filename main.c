@@ -99,6 +99,7 @@ RedeConexao cria_rede(){
     rede.quant_personagens = 0;
     rede.proximo_id = 0;
     rede.raiz = NULL;
+    rede.ult_nodo = NULL;
     return rede;
 }
 
