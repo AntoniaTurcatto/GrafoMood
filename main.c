@@ -125,6 +125,7 @@ int test(){
     Personagem per = cria_personagem();
 
     //validando primeira inserção e input
+    printf("TESTANDO PRIMEIRA INSERÇÃO...\n");
     adiciona_personagem_rd(&rd, per);
     if(rd.raiz == NULL){
         perror("Inicialização ao adicionar primeiro elemento errada: raiz NULL");
@@ -135,23 +136,32 @@ int test(){
     }
 
     //validando segunda inserção
+    printf("TESTANDO SEGUNDA INSERÇÃO...\n");
     per.idade = 200;
-    strncpy(per.nome, "teste", MAX_NOME);
+    strncpy(per.nome, "teste\0", MAX_NOME);
+    
     adiciona_personagem_rd(&rd, per);
+    printf("adicionado...\n");
     if(rd.raiz == NULL){
         perror("erro ao adicionar segundo elemento: raiz NULL");
-        return 1;
+        return -1;
     } else if(rd.ult_nodo == NULL){
         perror("Inserção de segundo elemento errada: ult_nodo != NULL");
-        return 1;
+        return -1;
+    } else if(rd.raiz->prox == NULL){
+        perror("Próximo da raiz não atualizado");
+        return -1;
     } else if(rd.raiz->prox->id_personagem != rd.ult_nodo->id_personagem){
         perror("Personagens não ligados");
+        return -1;
     } else if(rd.ult_nodo->info.idade != per.idade){
         perror("Personagem incorreto adicionado por último");
+        return -1;
     }
 
+    printf("TESTANDO TERCEIRA INSERÇÃO...\n");
     per.idade = 199;
-    strncpy(per.nome, "teste2", MAX_NOME);
+    strncpy(per.nome, "teste2\0", MAX_NOME);
     adiciona_personagem_rd(&rd, per);
     if(rd.raiz == NULL){
         perror("erro ao adicionar terceiro elemento: raiz NULL");
@@ -235,7 +245,7 @@ bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers){
         rd->raiz = p_novop;
     } else{
         if(rd->quant_personagens == 1){
-            rd->raiz->prox = rd->ult_nodo;
+            rd->raiz->prox = p_novop;
         } else {
             rd->ult_nodo->prox = p_novop;
         }
