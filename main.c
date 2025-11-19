@@ -21,6 +21,7 @@ Observações:
 
 #define MAX_NOME 75
 #define MAX_PERSONAGEM 20
+#define FLAG_TESTE "--test"
 
 typedef struct{
     char nome[MAX_NOME];
@@ -90,8 +91,27 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig);
 bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado prem);
 
-int main(){
+
+int run();
+void test();
+int main(int argc, char **argv){
+    
+    if (argc == 2){
+        if(strcmp(argv[1], FLAG_TESTE) == 0){
+            printf("===TESTE ATIVADO===");
+            test();
+            return 0;
+        }
+    }
+    return run;
+}
+
+int run(){
     return 0;
+}
+
+void test(){
+
 }
 
 RedeConexao cria_rede(){
