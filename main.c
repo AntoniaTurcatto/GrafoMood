@@ -91,9 +91,17 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig);
 bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado prem);
 
+// função para exibir
+bool exibir_rede(RedeConexao *rd);
+
+// função para exibir BFS
+bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio);
+// função para exibir DFS
+bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio);
 
 int run();
 void test();
+
 int main(int argc, char **argv){
     
     if (argc == 2){
@@ -103,7 +111,7 @@ int main(int argc, char **argv){
             return 0;
         }
     }
-    return run;
+    return run();
 }
 
 int run(){
@@ -326,6 +334,110 @@ bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado pb){
 
     free(pb.buscado);
     rd->quant_personagens--;    
+
+    return true;
+}
+
+bool exibir_rede(RedeConexao *rd) {
+    if (rd == NULL || rd->raiz == NULL)
+        return false;
+
+    printf("=== EXIBINDO REDE DE CONEXOES ===\n");
+
+    PersonagNodo *p = rd->raiz;
+
+    while (p != NULL) {
+        printf("Personagem %d: %s (%hu anos)\n",
+               p->id_personagem,
+               p->info.nome,
+               p->info.idade);
+
+        if (p->desc_conexoes.quant_conex == 0) {
+            printf("  -> Sem conexoes\n");
+        } else {
+            printf("  -> Conexoes: ");
+            Conexao *c = p->desc_conexoes.prim;
+            while (c != NULL) {
+                printf("[ID %d, peso %d] ",
+                       c->personagem->id_personagem,
+                       c->peso);
+                c = c->prox_conexao;
+            }
+            printf("\n");
+        }
+
+        p = p->prox;
+    }
+
+    return true;
+}
+
+bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio) {
+    if (rd == NULL || rd->raiz == NULL)
+        return false;
+
+    PersonagBuscado pb = busca_personag(id_inicio, rd);
+    if (!pb.encontrado)
+        return false;
+
+    bool visitado[MAX_PERSONAGEM] = {false};
+    PersonagNodo *fila[MAX_PERSONAGEM];
+    int ini = 0, fim = 0;
+
+    fila[fim++] = pb.buscado;
+    visitado[pb.buscado->id_personagem] = true;
+
+    printf("=== BFS a partir de %u ===\n", id_inicio);
+
+    while (ini < fim) {
+        PersonagNodo *atual = fila[ini++];
+
+        printf("Visitando ID %d\n", atual->id_personagem);
+
+        Conexao *c = atual->desc_conexoes.prim;
+
+        while (c != NULL) {
+            unsigned int id_dest = c->personagem->id_personagem;
+            if (!visitado[id_dest]) {
+                fila[fim++] = c->personagem;
+                visitado[id_dest] = true;
+            }
+
+            c = c->prox_conexao;
+        }
+    }
+
+    return true;
+}
+
+static void dfs_rec(PersonagNodo *p, bool visitado[]) {
+    visitado[p->id_personagem] = true;
+    printf("Visitando ID %d\n", p->id_personagem);
+
+    Conexao *c = p->desc_conexoes.prim;
+
+    while (c != NULL) {
+        unsigned int id_dest = c->personagem->id_personagem;
+        if (!visitado[id_dest]) {
+            dfs_rec(c->personagem, visitado);
+        }
+        c = c->prox_conexao;
+    }
+}
+
+bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio) {
+    if (rd == NULL || rd->raiz == NULL)
+        return false;
+
+    PersonagBuscado pb = busca_personag(id_inicio, rd);
+    if (!pb.encontrado)
+        return false;
+
+    bool visitado[MAX_PERSONAGEM] = {false};
+
+    printf("=== DFS a partir de %u ===\n", id_inicio);
+
+    dfs_rec(pb.buscado, visitado);
 
     return true;
 }
