@@ -84,20 +84,23 @@ Personagem cria_personagem();
 ///função para ler input textual do stdin tratando suas vulnerabilidades inerentes.
 bool ler_texto_stdin(char buffer[]);
 
+/// Função para buscar o pai de um personagem e se esse personagem existe na rede
 PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
+/// Função para buscar o pai de uma conexão e se essa conexão existe na rede
 ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 
-/// funções de remoção 
 bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig);
 bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado prem);
 
-// função para exibir
+/// função para exibir a rede completa
 bool exibir_rede(RedeConexao *rd);
 
-// função para exibir BFS
+/// função para exibir BFS
 bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio);
-// função para exibir DFS
+/// função para exibir DFS
 bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio);
+
+void dfs_rec(PersonagNodo *p, bool visitado[]);
 
 int run();
 void test();
@@ -410,7 +413,7 @@ bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio) {
     return true;
 }
 
-static void dfs_rec(PersonagNodo *p, bool visitado[]) {
+void dfs_rec(PersonagNodo *p, bool visitado[]) {
     visitado[p->id_personagem] = true;
     printf("Visitando ID %d\n", p->id_personagem);
 
