@@ -103,15 +103,14 @@ bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio);
 void dfs_rec(PersonagNodo *p, bool visitado[]);
 
 int run();
-void test();
+int test();
 
 int main(int argc, char **argv){
     
     if (argc == 2){
         if(strcmp(argv[1], FLAG_TESTE) == 0){
-            printf("===TESTE ATIVADO===");
-            test();
-            return 0;
+            printf("===TESTE ATIVADO===\n\n");
+            return test();
         }
     }
     return run();
@@ -121,8 +120,56 @@ int run(){
     return 0;
 }
 
-void test(){
+int test(){
+    RedeConexao rd = cria_rede();
+    Personagem per = cria_personagem();
 
+    //validando primeira inserção e input
+    adiciona_personagem_rd(&rd, per);
+    if(rd.raiz == NULL){
+        perror("Inicialização ao adicionar primeiro elemento errada: raiz NULL");
+        return 1;
+    } else if(rd.ult_nodo != NULL){
+        perror("Inicialização ao adicionar primeiro elemento errada: ult_nodo != NULL");
+        return 1;
+    }
+
+    //validando segunda inserção
+    per.idade = 200;
+    strncpy(per.nome, "teste", MAX_NOME);
+    adiciona_personagem_rd(&rd, per);
+    if(rd.raiz == NULL){
+        perror("erro ao adicionar segundo elemento: raiz NULL");
+        return 1;
+    } else if(rd.ult_nodo == NULL){
+        perror("Inserção de segundo elemento errada: ult_nodo != NULL");
+        return 1;
+    } else if(rd.raiz->prox->id_personagem != rd.ult_nodo->id_personagem){
+        perror("Personagens não ligados");
+    } else if(rd.ult_nodo->info.idade != per.idade){
+        perror("Personagem incorreto adicionado por último");
+    }
+
+    per.idade = 199;
+    strncpy(per.nome, "teste2", MAX_NOME);
+    adiciona_personagem_rd(&rd, per);
+    if(rd.raiz == NULL){
+        perror("erro ao adicionar terceiro elemento: raiz NULL");
+        return 1;
+    } else if(rd.ult_nodo == NULL){
+        perror("Inserção de terceiro elemento errada: ult_nodo != NULL");
+        return 1;
+    } else if(rd.raiz->prox->id_personagem == rd.ult_nodo->id_personagem){
+        perror("Descritor não atualizado");
+    } else if(rd.raiz->prox->prox->id_personagem != rd.ult_nodo->id_personagem){
+        perror("Personagens não ligados na 3a inserção");
+    } else if(rd.ult_nodo->info.idade != per.idade){
+        perror("Personagem incorreto adicionado por último");
+    }
+
+
+    printf("Sucesso ao testar!");
+    return 0;
 }
 
 RedeConexao cria_rede(){
@@ -183,16 +230,16 @@ bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers){
     p_novop->prox = NULL;
     p_novop->info = pers;
     
-    switch (rd->quant_personagens){
-        case 0:
-            rd->raiz = p_novop;
-            break;
-        case 1:
-            rd->ult_nodo   = p_novop;
+
+    if(rd->quant_personagens == 0){
+        rd->raiz = p_novop;
+    } else{
+        if(rd->quant_personagens == 1){
             rd->raiz->prox = rd->ult_nodo;
-            break; 
-        default:
+        } else {
             rd->ult_nodo->prox = p_novop;
+        }
+        rd->ult_nodo   = p_novop;
     }
 
     rd->quant_personagens++;
