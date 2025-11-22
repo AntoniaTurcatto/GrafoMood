@@ -111,7 +111,16 @@ void dfs_rec(PersonagNodo *p, bool visitado[]);
 int run();
 DetalhesTeste test();
 
-DetalhesTeste testar_insercao_grafo(RedeConexao *rd, Personagem p, DetalhesTeste dt);
+DetalhesTeste testar_ligamento_grafo(RedeConexao *rd, DetalhesTeste dt);
+
+/// Função de teste para conexão entre Conexões e se Personagem x está conectado a personagem y com peso z
+DetalhesTeste testar_conex_geral(RedeConexao *rd, DetalhesTeste dt, DescrConexoes dc, int id_pers_conexao, int peso, bool deve_existir_conex);
+
+/// Verifica se a conexão na lista de Conexões é íntegra, com elementos válidos
+DetalhesTeste testar_integr_conex_personag(RedeConexao *rd, DetalhesTeste dt, DescrConexoes desc_orig);
+
+/// Verifica se existe a conexão entre personagem x a personagem y, com peso z
+DetalhesTeste testar_conex_entre_pers(DetalhesTeste dt, DescrConexoes dc, int id_pers_conexao, int peso, bool deve_existir_conex);
 
 void printa_suceso_erro(bool erro, bool erro_prev);
 
@@ -122,7 +131,7 @@ int main(int argc, char **argv){
             printf("===TESTE ATIVADO===\n\n");
             dt = test();
             if(dt.erro){
-                perror(dt.detalhes_erro);
+                printf(dt.detalhes_erro);
                 return -1;
             }
             printf("\n\n===Sucesso ao testar!!===\n");
@@ -475,16 +484,16 @@ DetalhesTeste test(){
     //validando primeira inserção e input
     printf("TESTANDO PRIMEIRA INSERÇÃO...");
     adiciona_personagem_rd(&rd, per);
-    dt = testar_insercao_grafo(&rd, per, dt);
+    dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
 
-    //validando segunda inserção
+    //validando demais inserção
     printf("TESTANDO SEGUNDA INSERÇÃO...");
     per.idade = 200;
     strncpy(per.nome, "teste\0", MAX_NOME);
     adiciona_personagem_rd(&rd, per);
     erro_prev = erro_prev || dt.erro;
-    dt = testar_insercao_grafo(&rd, per, dt);
+    dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);        
 
     printf("TESTANDO TERCEIRA INSERÇÃO...");
@@ -492,7 +501,7 @@ DetalhesTeste test(){
     strncpy(per.nome, "teste3\0", MAX_NOME);
     adiciona_personagem_rd(&rd, per);
     erro_prev = erro_prev || dt.erro;
-    dt = testar_insercao_grafo(&rd, per, dt);
+    dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
 
     printf("TESTANDO QUARTA INSERÇÃO...");
@@ -500,16 +509,71 @@ DetalhesTeste test(){
     strncpy(per.nome, "teste4\0", MAX_NOME);
     adiciona_personagem_rd(&rd, per);
     erro_prev = erro_prev || dt.erro;
-    dt = testar_insercao_grafo(&rd, per, dt);
+    dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
 
+    printf("TESTANDO QUINTA INSERÇÃO...");
+    per.idade = 197;
+    strncpy(per.nome, "teste5\0", MAX_NOME);
+    adiciona_personagem_rd(&rd, per);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(&rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
 
-    printf("");
+    //inserção conexão......................
+
+    printf("CONECTANDO PRIMEIRO E 3o PERSONAGEM...");
+    atualiza_conexao_rd(rd.raiz, rd.raiz->prox->prox, 20, &rd);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.raiz->desc_conexoes, rd.raiz->prox->prox->id_personagem, 20, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("CONECTANDO 3o E PRIMEIRO PERSONAGEM...");
+    atualiza_conexao_rd(rd.raiz->prox->prox, rd.raiz , 33, &rd);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.raiz->prox->prox->desc_conexoes, rd.raiz->id_personagem,33, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("CONECTANDO ULT E PRIMEIRO PERSONAGEM...");
+    atualiza_conexao_rd(rd.ult_nodo, rd.raiz, 31, &rd);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    //remoção conexao ........................
+
+    printf("REMOVENDO CONEXAO ENTRE ULT E PRIM...");
+    remove_conexao_rd(rd.ult_nodo, busca_conex(rd.raiz->id_personagem, rd.ult_nodo->desc_conexoes), &rd, true);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, false);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    //remoção personag........................
+
+    printf("TESTANDO REMOÇÃO DE 1° ELEMENTO...");
+    remove_personagem_rd(&rd, busca_personag(rd.raiz->id_personagem, &rd));
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(&rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DE ULT ELEMENTO...");
+    remove_personagem_rd(&rd, busca_personag(rd.ult_nodo->id_personagem, &rd));
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(&rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DE 2° ELEMENTO...");
+    remove_personagem_rd(&rd, busca_personag(rd.raiz->prox->id_personagem, &rd));
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(&rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
     return dt;
 }
 
-DetalhesTeste testar_insercao_grafo(RedeConexao *rd, Personagem p, DetalhesTeste dt){
+DetalhesTeste testar_ligamento_grafo(RedeConexao *rd, DetalhesTeste dt){
     PersonagNodo *p_aux;
+    Conexao *c_aux;
 
     if(dt.erro)
         return dt;
@@ -518,13 +582,17 @@ DetalhesTeste testar_insercao_grafo(RedeConexao *rd, Personagem p, DetalhesTeste
 
     if(rd == NULL){
         strcpy(dt.detalhes_erro, "RedeConexao NULL");
+        dt.erro = true;
         return dt;
     }
-    if(rd->raiz == NULL){
-        strcpy(dt.detalhes_erro, "erro ao adicionar elemento: raiz NULL");
+    else if(rd->raiz == NULL){
+        strcpy(dt.detalhes_erro, "erro ligação elemento: raiz NULL");
+        dt.erro = true;
         return dt;
-    } else if(rd->ult_nodo == NULL && rd->quant_personagens > 1){
-        strcpy(dt.detalhes_erro, "Inserção de elemento errada: ult_nodo != NULL");
+    } 
+    else if(rd->ult_nodo == NULL && rd->quant_personagens > 1){
+        strcpy(dt.detalhes_erro, "Inserção de ligação errada: ult_nodo != NULL");
+        dt.erro = true;
         return dt;
     }
     
@@ -532,21 +600,106 @@ DetalhesTeste testar_insercao_grafo(RedeConexao *rd, Personagem p, DetalhesTeste
     for(int i = 1; i <= rd->quant_personagens; i++){
         if(p_aux->prox == NULL && i != rd->quant_personagens){
             snprintf(dt.detalhes_erro, MAX_ERRO, "O próximo nodo do %d° nodo é NULL", i);
-            return dt;
+            dt.erro = true;
+            break;
         }
+
+        dt = testar_integr_conex_personag(rd, dt, p_aux->desc_conexoes);
+        if(dt.erro)
+            break;    
 
         if(i < rd->quant_personagens){
             p_aux = p_aux->prox;
         }
     }
 
-    if(p_aux->id_personagem != rd->ult_nodo->id_personagem){
+    if(p_aux->id_personagem != rd->ult_nodo->id_personagem && !dt.erro){
         strcpy(dt.detalhes_erro, "Último personagem do descritor não foi atualizado");
-    } else if(rd->ult_nodo->info.idade != p.idade){
-        strcpy(dt.detalhes_erro, "Personagem incorreto adicionado por último");
+        dt.erro = true;
+    }
+
+    dt.erro = false;
+    return dt;
+}
+
+DetalhesTeste testar_conex_geral(RedeConexao *rd, DetalhesTeste dt, DescrConexoes dc, int id_pers_conexao, int peso, bool deve_existir_conex){
+    if(dt.erro)
+        return dt;
+
+    dt = testar_integr_conex_personag(rd, dt, dc);    
+    if (!dt.erro)
+        dt = testar_conex_entre_pers(dt, dc, id_pers_conexao, peso, deve_existir_conex);
+    
+    return dt;    
+}
+
+DetalhesTeste testar_integr_conex_personag(RedeConexao *rd, DetalhesTeste dt, DescrConexoes desc_orig){
+    Conexao *aux;
+
+    if(dt.erro || desc_orig.quant_conex == 0)
+        return dt;
+   
+    aux = desc_orig.prim;
+
+    dt.erro = true;
+    for(int i = 1; i <= desc_orig.quant_conex; i++){
+        if(aux->prox_conexao == NULL && i != desc_orig.quant_conex){
+            snprintf(dt.detalhes_erro, MAX_ERRO, "A próxima conexão da %d° conexão é NULL quando não deveria ser", i);
+            return dt;
+        }
+
+        if(aux->personagem == NULL){
+            snprintf(dt.detalhes_erro, MAX_ERRO, "O personagem da %d° conexão é NULL", i);
+            return dt;
+        } else{
+            if(!busca_personag(aux->personagem->id_personagem, rd).encontrado){
+                snprintf(dt.detalhes_erro, MAX_ERRO, "O personagem da %d° conexão é não existe dentre os vértices", i);
+                return dt;
+            }
+        }
+
+        if(i < desc_orig.quant_conex)
+            aux = aux->prox_conexao;
+        else if (aux->prox_conexao != NULL){
+            snprintf(dt.detalhes_erro, MAX_ERRO, "A próxima conexão da ÚLTIMA conexão não é NULL (quando deveria ser)");
+            return dt;
+        }   
+    }
+
+    dt.erro = false;
+    return dt;
+}
+
+DetalhesTeste testar_conex_entre_pers(DetalhesTeste dt, DescrConexoes dc, int id_pers_conexao, int peso, bool deve_existir_conex){
+    Conexao *aux;
+
+    if(dt.erro){
+        return dt;
+    }
+
+    aux = dc.prim;
+    dt.erro = true; 
+    while(aux != NULL){
+        if(aux->personagem->id_personagem == id_pers_conexao && deve_existir_conex){
+            dt.erro = false;
+            if(aux->peso != peso){
+                snprintf(dt.detalhes_erro, MAX_ERRO, "O peso da conexão não foi atualizado, sendo %d quando deveria ser %d", aux->peso, peso);
+            }
+            break;
+        } 
+        dt.erro = true;  
+        aux = aux->prox_conexao;
+    }
+
+    //só existir erro de não encontrar se deve encontrar
+    dt.erro = dt.erro && deve_existir_conex;
+    if(dt.erro){
+        snprintf(dt.detalhes_erro, MAX_ERRO, "Personagem não encontrado nas conexões");
     }
     return dt;
 }
+
+
 
 void printa_suceso_erro(bool erro, bool erro_prev){
     if(erro_prev){
