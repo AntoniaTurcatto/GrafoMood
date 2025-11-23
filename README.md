@@ -1,4 +1,4 @@
-![Grafo](/docs/images/placeholder-logo.png)
+![Grafo](docs/images/placeholder-logo.png)
 
 **GrafoMood** é um sistema baseado em grafos desenvolvido como trabalho
 da disciplina de Estrutura de Dados e Programação (EDP).\
