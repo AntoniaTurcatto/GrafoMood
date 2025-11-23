@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/AntoniaTurcatto/GrafoMood/blob/13387b2dfed32bbd57e5f06fbe7dd95a256c7ef3/docs/images/GrafoMood.jpg" width="350" alt="Grafo">
+  <img src="https://github.com/AntoniaTurcatto/GrafoMood/blob/450a85d86638c732d70c14449fe34a1e1662574d/docs/images/grafomood.jpg" width="350" alt="Grafo">
 </p>
 
 **GrafoMood** é um sistema baseado em grafos desenvolvido como trabalho
