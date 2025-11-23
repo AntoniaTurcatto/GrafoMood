@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/docs/images/placeholder-logo.png" width="350" alt="Grafo">
+  <img src="/docs/images/GrafoMood.jpg" width="350" alt="Grafo">
 </p>
 
 **GrafoMood** é um sistema baseado em grafos desenvolvido como trabalho
