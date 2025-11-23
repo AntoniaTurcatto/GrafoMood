@@ -20,14 +20,6 @@ relações, permitindo visualizar, alterar e analisar esses
 vínculos por meio de operações em um grafo orientado e valorado. 
 Também possibilitar realizar ações em rede que afetam os vínculos e causam outas ações em cascata.
 
-## 🤝 Como contribuir
-- snake_case
-- Sufixo de funções que manipulam o grafo devem terminar com _rd_. Ex: bool adiciona2_personagem_rd(...)
-- Todos os structs declarados logo após os #include
-- Manter as interfaces das funções reunidas abaixo das declarações dos structs
-- Manter a implementação da função `int main()` logo após a declaração das structs
-- No possível, manter funções relacionadas juntas. O mesmo se aplica para as structs. 
-
 ## ⚙️Funcionalidades
 
 ### 🆕 Criar e gerenciar personagens
