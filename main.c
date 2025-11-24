@@ -18,6 +18,7 @@ Observações:
 #include <strings.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #define MAX_NOME 75
 #define MAX_ERRO 100
@@ -123,6 +124,8 @@ DetalhesTeste testar_integr_conex_personag(RedeConexao *rd, DetalhesTeste dt, De
 DetalhesTeste testar_conex_entre_pers(DetalhesTeste dt, DescrConexoes dc, int id_pers_conexao, int peso, bool deve_existir_conex);
 
 void printa_suceso_erro(bool erro, bool erro_prev);
+
+bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo);
 
 int main(int argc, char **argv){
     DetalhesTeste dt;
@@ -540,6 +543,16 @@ DetalhesTeste test(){
     dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
+
+    //salvando ..............................
+
+    printf("Salvando...");
+    erro_prev = erro_prev || dt.erro;
+    dt.erro = !salvar_grafo_dot(&rd, "teste");
+    if(dt.erro)
+        snprintf(dt.detalhes_erro, MAX_ERRO, "Erro ao salvar arquivo. Erro: %d", errno);
+    printa_suceso_erro(dt.erro, erro_prev);
+
     //remoção conexao ........................
 
     printf("REMOVENDO CONEXAO ENTRE ULT E PRIM...");
@@ -710,4 +723,58 @@ void printa_suceso_erro(bool erro, bool erro_prev){
     } else {
         printf("Sucesso\n");
     }
+}
+
+bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo) {
+    char caminho[512];
+
+    // snprintf evita overflow
+    snprintf(caminho, sizeof(caminho), "%s.dot", nomeArquivo);
+
+    FILE *arq = fopen(caminho, "w");
+    if (!arq) {
+        perror("Erro ao abrir arquivo");
+        return false;
+    }
+    if (!arq) return false;
+
+    fprintf(arq, "digraph G {\n");
+    
+    PersonagNodo *p = rd->raiz;
+    while (p != NULL) {
+        // nó
+        fprintf(arq, "    %d [label=\"%s (%hu)\"];\n",
+                p->id_personagem,
+                p->info.nome,
+                p->info.idade);
+
+        // arestas
+        Conexao *c = p->desc_conexoes.prim;
+        while (c != NULL) {
+            const char *cor;
+
+            // definir cor baseada no peso
+            if (c->peso >= 7) {
+                cor = "red";
+            } else if (c->peso >= 4) {
+                cor = "orange";
+            } else {
+                cor = "blue";
+            }
+
+            fprintf(arq, "    %d -> %d [label=\"%d\", color=%s];\n",
+                    p->id_personagem,
+                    c->personagem->id_personagem,
+                    c->peso,
+                    cor);
+
+            c = c->prox_conexao;
+        }
+
+        p = p->prox;
+    }
+
+    fprintf(arq, "}\n");
+    fclose(arq);
+    return true;
 }
