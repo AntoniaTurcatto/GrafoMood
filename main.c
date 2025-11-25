@@ -24,6 +24,7 @@ Observações:
 #define MAX_ERRO 100
 #define MAX_PERSONAGEM 20
 #define FLAG_TESTE "--test"
+#define NA_ALCANCADO -1
 
 typedef struct{
     char nome[MAX_NOME];
@@ -126,6 +127,10 @@ DetalhesTeste testar_conex_entre_pers(DetalhesTeste dt, DescrConexoes dc, int id
 void printa_suceso_erro(bool erro, bool erro_prev);
 
 bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo);
+
+/// Verifica vinculo de dois personagens 
+int diagnostica_vinculo_completo_rd(RedeConexao *rd, unsigned int id_origem, unsigned int id_destino);
+void imprime_vinculo_rd(RedeConexao *rd, unsigned int idA, unsigned int idB);
 
 int main(int argc, char **argv){
     DetalhesTeste dt;
@@ -475,6 +480,65 @@ bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio) {
     return true;
 }
 
+int diagnostica_vinculo_completo_rd(RedeConexao *rd, unsigned int id_origem, unsigned int id_destino) {
+    if (rd == NULL || rd->raiz == NULL)
+        return NA_ALCANCADO;
+
+    if (id_origem == id_destino)
+        return 0;
+
+    PersonagBuscado pb_origem = busca_personag(id_origem, rd);
+    if (!pb_origem.encontrado)
+        return NA_ALCANCADO;
+
+    int distancia[MAX_PERSONAGEM];
+    for (int i = 0; i < MAX_PERSONAGEM; i++)
+        distancia[i] = NA_ALCANCADO;
+
+    PersonagNodo *fila[MAX_PERSONAGEM];
+    int ini = 0, fim = 0;
+
+    fila[fim++] = pb_origem.buscado;
+    distancia[pb_origem.buscado->id_personagem] = 0;
+
+    while (ini < fim) {
+        PersonagNodo *atual = fila[ini++];
+        int dist_atual = distancia[atual->id_personagem];
+
+        Conexao *c = atual->desc_conexoes.prim;
+        while (c != NULL) {
+            unsigned int id_vizinho = c->personagem->id_personagem;
+
+            if (id_vizinho == id_destino) {
+                return dist_atual + 1;
+            }
+
+            if (distancia[id_vizinho] == NA_ALCANCADO) {
+                if (id_vizinho < MAX_PERSONAGEM) {
+                    distancia[id_vizinho] = dist_atual + 1;
+                    fila[fim++] = c->personagem;
+                }
+            }
+            c = c->prox_conexao;
+        }
+    }
+
+    return NA_ALCANCADO;
+}
+
+void imprime_vinculo_rd(RedeConexao *rd, unsigned int idA, unsigned int idB) {
+    int grau = diagnostica_vinculo_completo_rd(rd, idA, idB);
+
+    if (grau == NA_ALCANCADO) {
+        printf("Personagem %d e Personagem %d não possuem vínculo.\n", idA, idB);
+    } else if (grau == 0) {
+        printf("Personagem %d e Personagem %d são a mesma pessoa.\n", idA, idB);
+    } else if (grau == 1) {
+        printf("Personagem %d e Personagem %d possuem vínculo DIRETO (grau 1).\n", idA, idB);
+    } else {
+        printf("Personagem %d e Personagem %d possuem vínculo INDIRETO (grau %d).\n", idA, idB, grau);
+    }
+}
 
 DetalhesTeste test(){
     RedeConexao rd = cria_rede();
