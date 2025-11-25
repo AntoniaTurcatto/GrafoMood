@@ -97,7 +97,7 @@ PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
 /// Função para buscar o pai de uma conexão e se essa conexão existe na rede
 ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 
-bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig);
+bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd);
 bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado prem);
 
 /// função para exibir a rede completa
@@ -233,6 +233,12 @@ bool atualiza_conexao_rd(PersonagNodo *orig, PersonagNodo *dest, unsigned int pe
     if(orig == NULL|| dest == NULL){
         return false;
     }
+
+    //todo: fazer busca_personagS
+    if(!busca_personag(orig->id_personagem, rd).encontrado || !busca_personag(dest->id_personagem, rd).encontrado) {
+        return false;
+    }
+
     conexb = busca_conex(dest->id_personagem, orig->desc_conexoes);
 
     if(!conexb.encontrado){
@@ -295,15 +301,10 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p){
     return cb;
 }
 
-bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd, bool validar_pers_orig){
+bool remove_conexao_rd(PersonagNodo *orig, ConexaoBusc cb, RedeConexao *rd){
 
     if(orig == NULL || rd == NULL || !cb.encontrado)
         return false;    
-
-    if (validar_pers_orig){    
-        if(!busca_personag(orig->id_personagem, rd).encontrado)
-            return false;
-    }
 
     if(orig->desc_conexoes.quant_conex == 1){   
         orig->desc_conexoes.prim = orig->desc_conexoes.ult = NULL;
@@ -338,7 +339,7 @@ bool remove_personagem_rd(RedeConexao *rd, PersonagBuscado pb){
     aux = rd->raiz;
     while(aux != NULL){
         if(aux->id_personagem != pb.buscado->id_personagem){
-            remove_conexao_rd(aux, busca_conex(pb.buscado->id_personagem, aux->desc_conexoes), rd, false);
+            remove_conexao_rd(aux, busca_conex(pb.buscado->id_personagem, aux->desc_conexoes), rd);
         }
         aux = aux->prox;
     }
@@ -545,6 +546,7 @@ DetalhesTeste test(){
     Personagem per = cria_personagem();
     DetalhesTeste dt;
     bool erro_prev = false;
+    PersonagNodo aux;
 
     dt.erro = false;
 
@@ -620,7 +622,7 @@ DetalhesTeste test(){
     //remoção conexao ........................
 
     printf("REMOVENDO CONEXAO ENTRE ULT E PRIM...");
-    remove_conexao_rd(rd.ult_nodo, busca_conex(rd.raiz->id_personagem, rd.ult_nodo->desc_conexoes), &rd, true);
+    remove_conexao_rd(rd.ult_nodo, busca_conex(rd.raiz->id_personagem, rd.ult_nodo->desc_conexoes), &rd);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, false);  
     printa_suceso_erro(dt.erro, erro_prev);
@@ -628,10 +630,17 @@ DetalhesTeste test(){
     //remoção personag........................
 
     printf("TESTANDO REMOÇÃO DE 1° ELEMENTO...");
+    aux = *(rd.raiz); // para usar depois
     remove_personagem_rd(&rd, busca_personag(rd.raiz->id_personagem, &rd));
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
+
+    // teste adicionar conexão inválida
+    if(atualiza_conexao_rd(rd.raiz, &aux, 2, &rd) && !erro_prev){
+        dt.erro = true;
+        snprintf(dt.detalhes_erro, MAX_ERRO, "Realizou conexão com elemento não existente na lista de vertices");
+    }
 
     printf("TESTANDO REMOÇÃO DE ULT ELEMENTO...");
     remove_personagem_rd(&rd, busca_personag(rd.ult_nodo->id_personagem, &rd));
@@ -643,6 +652,26 @@ DetalhesTeste test(){
     remove_personagem_rd(&rd, busca_personag(rd.raiz->prox->id_personagem, &rd));
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DA RAIZ...");
+    remove_personagem_rd(&rd, busca_personag(rd.raiz->id_personagem, &rd));
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(&rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DA RAIZ...");
+    remove_personagem_rd(&rd, busca_personag(rd.raiz->id_personagem, &rd));
+    erro_prev = erro_prev || dt.erro;
+    if((rd.raiz != NULL || rd.ult_nodo != NULL) && !erro_prev){
+        dt.erro = true;
+        snprintf(dt.detalhes_erro, MAX_ERRO, "raiz ou ultnodo não NULL quando vazio");
+    }
+
+    if(remove_personagem_rd(&rd, busca_personag(1, &rd)) && !erro_prev){
+        dt.erro = true;
+        snprintf(dt.detalhes_erro, MAX_ERRO, "Deixou remover sem nenhum elemento");
+    }
     printa_suceso_erro(dt.erro, erro_prev);
 
     return dt;
