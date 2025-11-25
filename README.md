@@ -23,7 +23,7 @@ vínculos por meio de operações em um grafo orientado e valorado.
 Também possibilitar realizar ações em rede que afetam os vínculos e causam outas ações em cascata.
 
 ## ⚙️Documentação
-[Página principal](https://github.com/AntoniaTurcatto/GrafoMood/blob/e2c2951d97187927cdb8cc99121f5c89126c88f2/docs/DOCS.md)
+[Página principal](/docs/DOCS.md)
 
 ## Como executar
 
