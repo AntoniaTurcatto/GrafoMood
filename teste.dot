@@ -1,5 +1,5 @@
 digraph G {
-    0 [label="d (3)"];
+    0 [label="a (1)"];
     0 -> 2 [label="20", color=red];
     1 [label="teste (200)"];
     2 [label="teste3 (199)"];
