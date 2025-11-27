@@ -25,6 +25,7 @@ Observações:
 #define MAX_PERSONAGEM 20
 #define FLAG_TESTE "--test"
 #define NA_ALCANCADO -1
+#define PROF_PRIM_RECEPTOR 1
 
 typedef struct{
     char nome[MAX_NOME];
@@ -90,7 +91,7 @@ bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers);
 
 /// atualiza o vínculo entre personagens. Caso não exista o vínculo, cria.
 /// retorno: false caso não exista um dos personagens
-bool atualiza_conexao_rd(PersonagNodo *orig,  PersonagNodo *dest, unsigned int peso, RedeConexao *rd);
+bool atualiza_conexao_rd(PersonagNodo *orig,  PersonagNodo *dest, unsigned int peso, bool atualiza);
 
 Personagem cria_personagem();
 
@@ -133,7 +134,9 @@ void printa_suceso_erro(bool erro, bool erro_prev);
 
 bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo);
 
-void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao, RedeConexao *rd);
+void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao);
+
+void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao acao, int profundidade);
 
 /// Verifica vinculo de dois personagens 
 int diagnostica_vinculo_completo_rd(RedeConexao *rd, unsigned int id_origem, unsigned int id_destino);
@@ -235,7 +238,7 @@ bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers){
     return true;    
 }
 
-bool atualiza_conexao_rd(PersonagNodo *orig, PersonagNodo *dest, unsigned int peso, RedeConexao *rd){
+bool atualiza_conexao_rd(PersonagNodo *orig, PersonagNodo *dest, unsigned int peso, bool atualiza){
     ConexaoBusc conexb;
       
     if(orig == NULL|| dest == NULL){
@@ -262,7 +265,11 @@ bool atualiza_conexao_rd(PersonagNodo *orig, PersonagNodo *dest, unsigned int pe
 
         orig->desc_conexoes.quant_conex++;
     }
-    conexb.buscado->peso = conexb.buscado->peso + peso;
+    if(atualiza)
+        conexb.buscado->peso = conexb.buscado->peso + peso;
+    else    
+        conexb.buscado->peso = peso;
+
     return true;
 }
 
@@ -553,7 +560,7 @@ void imprime_vinculo_rd(RedeConexao *rd, unsigned int idA, unsigned int idB) {
 
 
 // AÇÕES ................................................
-void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao, RedeConexao *rd){
+void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao){
     if(receptor == NULL)
         return;
 
@@ -563,7 +570,31 @@ void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao, 
     } else {
         peso = -10;
     } 
-    atualiza_conexao_rd(receptor, emissor, peso, rd); 
+    atualiza_conexao_rd(receptor, emissor, peso, true); 
+    propaga_acao(emissor, receptor, acao, PROF_PRIM_RECEPTOR);
+}
+
+void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao acao, int profundidade){
+    if(emissor_orig == NULL)
+        return; 
+
+    Conexao *caux = emissor->desc_conexoes.prim;
+    while(caux != NULL){
+        if(caux->peso >= 50){
+            float chance_distancia = 1.0f / profundidade;
+            float chance_peso = (float)caux->peso / 100.0f; // normalizar de 100 para 1.0
+            float chance_tot  = chance_distancia * chance_peso;
+            float r = rand() / (float)RAND_MAX; // numero entre 0.0 e 1.0
+            if(r < chance_tot){
+                int peso_base = acao == ACAO_ELOGIO ? 10 : -10;
+
+                atualiza_conexao_rd(caux->personagem, emissor_orig, peso_base / profundidade, true);
+                propaga_acao(emissor_orig, caux->personagem, acao, profundidade+1);
+            }
+        }
+
+        caux = caux->prox_conexao;
+    }
 }
 
 DetalhesTeste test(){
@@ -617,19 +648,19 @@ DetalhesTeste test(){
     //inserção conexão......................
 
     printf("CONECTANDO PRIMEIRO E 3o PERSONAGEM...");
-    atualiza_conexao_rd(rd.raiz, rd.raiz->prox->prox, 20, &rd);
+    atualiza_conexao_rd(rd.raiz, rd.raiz->prox->prox, 20, false);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.raiz->desc_conexoes, rd.raiz->prox->prox->id_personagem, 20, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
     printf("CONECTANDO 3o E PRIMEIRO PERSONAGEM...");
-    atualiza_conexao_rd(rd.raiz->prox->prox, rd.raiz , 33, &rd);
+    atualiza_conexao_rd(rd.raiz->prox->prox, rd.raiz , 33, false);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.raiz->prox->prox->desc_conexoes, rd.raiz->id_personagem,33, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
     printf("CONECTANDO ULT E PRIMEIRO PERSONAGEM...");
-    atualiza_conexao_rd(rd.ult_nodo, rd.raiz, 31, &rd);
+    atualiza_conexao_rd(rd.ult_nodo, rd.raiz, 31, true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, true);  
     printa_suceso_erro(dt.erro, erro_prev);
