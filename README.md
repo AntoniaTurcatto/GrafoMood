@@ -20,17 +20,17 @@ modificar os vínculos individualizados.
 Criar uma ferramenta que represente personagens e suas
 relações, permitindo visualizar, alterar e analisar esses
 vínculos por meio de operações em um grafo orientado e valorado. 
-Também possibilitar realizar ações em rede que afetam os vínculos e causam outas ações em cascata.
+Também possibilitar realizar ações em rede que afetam os vínculos e causam outras ações em cascata.
 
-## ⚙️Documentação
-[Página principal](/docs/DOCS.md)
+## 📝 Documentação
+[Página principal da documentação](/docs/DOCS.md)
 
-## Como compilar
+## ⚙️ Como compilar
 Usando `gcc`
 
     gcc maic.c -o grafomood  
 
-## Flags opcionais
+## 🎏 Flags opcionais
 - `--test`  
   Executa a suíte de testes da aplicação e exibe o resultado (sucesso ou falha). 
   Em caso de erro conhecido, também mostra uma descrição detalhada do problema.
