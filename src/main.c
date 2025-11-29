@@ -27,6 +27,7 @@ Observações:
 #define FLAG_TESTE "--test"
 #define NA_ALCANCADO -1
 #define PROF_PRIM_RECEPTOR 1
+#define PESO_NORMAL 50
 
 typedef struct{
     char nome[MAX_NOME];
@@ -86,13 +87,21 @@ typedef enum {
     ACAO_INSULTO
 } TipoAcao;
 
+typedef struct{
+    PersonagNodo *emissor;
+    PersonagNodo *receptor;
+    TipoAcao acao;
+    RedeConexao *pers_informados;
+}DetalhesAcao;
+
 RedeConexao cria_rede();
 
 void limpa_rede_rd(RedeConexao *rd);
 
 DescrConexoes cria_descr_conex();
 
-bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers);
+/// Adiciona personagem ao grafo, manipulando seu id conforme argumento
+bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto);
 
 /// atualiza o vínculo entre personagens. Caso não exista o vínculo, cria.
 /// retorno: false caso não exista um dos personagens
@@ -143,7 +152,7 @@ bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo);
 
 void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao);
 
-void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao acao, int profundidade, RedeConexao *personag_ja_contaram);
+void propaga_acao(DetalhesAcao detalhes, PersonagNodo *emissor, int profundidade);
 
 /// Verifica vinculo de dois personagens 
 int diagnostica_vinculo_completo_rd(RedeConexao *rd, unsigned int id_origem, unsigned int id_destino);
@@ -238,13 +247,12 @@ bool ler_texto_stdin(char buffer[]){
     return true;
 }
 
-
-
-bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers){
+bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto){
     if(rd == NULL)
         return false;
+    if(id_auto)
+        pers->id_personagem = rd->proximo_id++; //incrementa após uso
 
-    pers->id_personagem = rd->proximo_id++; //incrementa após uso
     if(rd->quant_personagens == 0){
         rd->raiz = pers;
     } else{
@@ -272,6 +280,7 @@ bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsig
         conexb.buscado = (Conexao*)malloc(sizeof(Conexao));
         conexb.buscado->personagem    = dest;
         conexb.buscado->prox_conexao  = NULL;
+        conexb.buscado->peso = PESO_NORMAL;
 
         if(desc_conexoes->quant_conex == 0){
             desc_conexoes->prim = desc_conexoes->ult = conexb.buscado;
@@ -291,7 +300,6 @@ bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsig
     }else{    
         conexb.buscado->peso = peso;    
     }
-
     if(conexb.buscado->peso > 100)
         conexb.buscado->peso = 100;
     return true;
@@ -586,30 +594,36 @@ void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao){
     if(receptor == NULL)
         return;
 
-    RedeConexao personag_ja_contaram = cria_rede();
+    RedeConexao pers_informados = cria_rede();
+    DetalhesAcao detalhes;
+    detalhes.acao = acao;
+    detalhes.emissor = emissor;
+    detalhes.receptor = receptor;
+    detalhes.pers_informados = &pers_informados;
 
     int peso;
     if(acao == ACAO_ELOGIO){
         peso = 10;
     } else {
         peso = -10;
-    } 
+    }
+    
     atualiza_conexao_rd(&(receptor->desc_conexoes), emissor, peso, true); 
 
-    adiciona_personagem_rd(&personag_ja_contaram, cria_nodo_pers(emissor->info)); 
-    adiciona_personagem_rd(&personag_ja_contaram, cria_nodo_pers(receptor->info)); 
-    propaga_acao(emissor, receptor, acao, PROF_PRIM_RECEPTOR, &personag_ja_contaram);
+    adiciona_personagem_rd(&pers_informados, cria_nodo_pers(emissor->info), false); 
+    adiciona_personagem_rd(&pers_informados, cria_nodo_pers(receptor->info), false); 
+    propaga_acao(detalhes, receptor, PROF_PRIM_RECEPTOR);
 
-    limpa_rede_rd(&personag_ja_contaram);
+    limpa_rede_rd(&pers_informados);
 }
 
-void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao acao, int profundidade, RedeConexao *personag_ja_contaram){
-    if(emissor_orig == NULL)
+void propaga_acao(DetalhesAcao detalhes, PersonagNodo *emissor, int profundidade){
+    if(detalhes.emissor == NULL)
         return; 
 
     Conexao *caux = emissor->desc_conexoes.prim;
     while(caux != NULL){
-        if(caux->personagem = emissor_orig){
+        if(caux->personagem == detalhes.emissor || caux->personagem == detalhes.receptor){
             goto PROXIMO;
         }
 
@@ -618,15 +632,18 @@ void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao ac
             float chance_peso = (float)caux->peso / 100.0f; // normalizar de 100 para 1.0
             float chance_tot  = chance_distancia * chance_peso;
             float r = rand() / (float)RAND_MAX; // numero entre 0.0 e 1.0
-            if(r < chance_tot){
-                printf("%s contou sobre a ação de %s para %s...\n", emissor->info.nome, emissor_orig->info.nome,caux->personagem->info.nome);
-                int peso_base = acao == ACAO_ELOGIO ? 10 : -10;
+            if(r <= chance_tot){
+                printf("%s[%d] contou sobre a ação de %s[%d] para %s[%d]...\n", 
+                    emissor->info.nome, emissor->id_personagem,
+                    detalhes.emissor->info.nome, detalhes.emissor->id_personagem,
+                    caux->personagem->info.nome, caux->personagem->id_personagem);
+                int peso_base = detalhes.acao == ACAO_ELOGIO ? 10 : -10;
 
-                atualiza_conexao_rd(&caux->personagem->desc_conexoes, emissor_orig, peso_base / profundidade, true);
+                atualiza_conexao_rd(&caux->personagem->desc_conexoes, detalhes.emissor, peso_base / profundidade, true);
 
-                if(!busca_personag(caux->personagem->id_personagem, personag_ja_contaram).encontrado){
-                    adiciona_personagem_rd(personag_ja_contaram, cria_nodo_pers(caux->personagem->info)); 
-                    propaga_acao(emissor_orig, caux->personagem, acao, profundidade+1, personag_ja_contaram);
+                if(!busca_personag(caux->personagem->id_personagem, detalhes.pers_informados).encontrado){
+                    adiciona_personagem_rd(detalhes.pers_informados, cria_nodo_pers(caux->personagem->info), false); 
+                    propaga_acao(detalhes, caux->personagem, profundidade+1);
                 }
                 
             }
@@ -647,7 +664,7 @@ DetalhesTeste test(){
 
     //validando primeira inserção e input
     printf("TESTANDO PRIMEIRA INSERÇÃO...");
-    adiciona_personagem_rd(&rd, cria_nodo_pers(per));
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
 
@@ -655,7 +672,7 @@ DetalhesTeste test(){
     printf("TESTANDO SEGUNDA INSERÇÃO...");
     per.idade = 200;
     strncpy(per.nome, "teste\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, cria_nodo_pers(per));
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);        
@@ -663,7 +680,7 @@ DetalhesTeste test(){
     printf("TESTANDO TERCEIRA INSERÇÃO...");
     per.idade = 199;
     strncpy(per.nome, "teste3\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, cria_nodo_pers(per));
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
@@ -671,7 +688,7 @@ DetalhesTeste test(){
     printf("TESTANDO QUARTA INSERÇÃO...");
     per.idade = 198;
     strncpy(per.nome, "teste4\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, cria_nodo_pers(per));
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
@@ -679,7 +696,7 @@ DetalhesTeste test(){
     printf("TESTANDO QUINTA INSERÇÃO...");
     per.idade = 197;
     strncpy(per.nome, "teste5\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, cria_nodo_pers(per));
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
@@ -687,15 +704,27 @@ DetalhesTeste test(){
     //inserção conexão......................
 
     printf("CONECTANDO PRIMEIRO E 3o PERSONAGEM...");
-    atualiza_conexao_rd(&rd.raiz->desc_conexoes, rd.raiz->prox->prox, 20, false);
+    atualiza_conexao_rd(&rd.raiz->desc_conexoes, rd.raiz->prox->prox, 200, false);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.raiz->desc_conexoes, rd.raiz->prox->prox->id_personagem, 20, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
     printf("CONECTANDO 3o E PRIMEIRO PERSONAGEM...");
-    atualiza_conexao_rd(&rd.raiz->prox->prox->desc_conexoes, rd.raiz , 33, false);
+    atualiza_conexao_rd(&rd.raiz->prox->prox->desc_conexoes, rd.raiz , 830, false);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.raiz->prox->prox->desc_conexoes, rd.raiz->id_personagem,33, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("CONECTANDO 3o E 2o PERSONAGEM...");
+    atualiza_conexao_rd(&rd.raiz->prox->prox->desc_conexoes, rd.raiz->prox , 830, false);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.raiz->prox->prox->desc_conexoes, rd.raiz->prox->id_personagem,33, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("CONECTANDO 2o E 3o PERSONAGEM...");
+    atualiza_conexao_rd(&rd.raiz->prox->desc_conexoes, rd.raiz->prox->prox , 830, false);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.raiz->prox->desc_conexoes, rd.raiz->prox->prox->id_personagem,33, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
     printf("CONECTANDO ULT E PRIMEIRO PERSONAGEM...");
@@ -720,9 +749,12 @@ DetalhesTeste test(){
 
     exibir_rede(&rd);
     realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
-    //realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
-    //realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
-    //realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
     exibir_rede(&rd);
 
     //remoção conexao ........................
