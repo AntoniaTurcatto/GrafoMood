@@ -1,0 +1,12 @@
+digraph G {
+    0 [label="d (3)"];
+    0 -> 2 [label="100", color=red];
+    1 [label="teste (200)"];
+    1 -> 2 [label="100", color=red];
+    2 [label="teste3 (199)"];
+    2 -> 0 [label="100", color=red];
+    2 -> 1 [label="100", color=red];
+    3 [label="teste4 (198)"];
+    4 [label="teste5 (197)"];
+    4 -> 0 [label="81", color=red];
+}

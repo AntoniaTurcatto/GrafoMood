@@ -19,6 +19,7 @@ Observações:
 #include <string.h>
 #include <stdbool.h>
 #include <errno.h>
+#include<unistd.h>
 
 #define MAX_NOME 75
 #define MAX_ERRO 100
@@ -26,6 +27,7 @@ Observações:
 #define FLAG_TESTE "--test"
 #define NA_ALCANCADO -1
 #define PROF_PRIM_RECEPTOR 1
+#define PESO_NORMAL 50
 
 typedef struct{
     char nome[MAX_NOME];
@@ -85,15 +87,29 @@ typedef enum {
     ACAO_INSULTO
 } TipoAcao;
 
+typedef struct{
+    PersonagNodo *emissor;
+    PersonagNodo *receptor;
+    TipoAcao acao;
+    RedeConexao *pers_informados;
+}DetalhesAcao;
+
 RedeConexao cria_rede();
 
-bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers);
+void limpa_rede_rd(RedeConexao *rd);
+
+DescrConexoes cria_descr_conex();
+
+/// Adiciona personagem ao grafo, manipulando seu id conforme argumento
+bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto);
 
 /// atualiza o vínculo entre personagens. Caso não exista o vínculo, cria.
 /// retorno: false caso não exista um dos personagens
-bool atualiza_conexao_rd(PersonagNodo *orig,  PersonagNodo *dest, unsigned int peso, bool atualiza);
+bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsigned int peso, bool atualiza);
 
 Personagem cria_personagem();
+
+PersonagNodo *cria_nodo_pers(Personagem p);
 
 ///função para ler input textual do stdin tratando suas vulnerabilidades inerentes.
 bool ler_texto_stdin(char buffer[]);
@@ -103,7 +119,7 @@ PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
 /// Função para buscar o pai de uma conexão e se essa conexão existe na rede
 ConexaoBusc busca_conex(unsigned int id, DescrConexoes p);
 
-bool remove_conexao_rd(PersonagNodo *orig, PersonagNodo *remov);
+bool remove_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *remov);
 bool remove_personagem_rd(RedeConexao *rd, PersonagNodo *p);
 
 /// função para exibir a rede completa
@@ -136,7 +152,7 @@ bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo);
 
 void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao);
 
-void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao acao, int profundidade);
+void propaga_acao(DetalhesAcao detalhes, PersonagNodo *emissor, int profundidade);
 
 /// Verifica vinculo de dois personagens 
 int diagnostica_vinculo_completo_rd(RedeConexao *rd, unsigned int id_origem, unsigned int id_destino);
@@ -173,6 +189,14 @@ RedeConexao cria_rede(){
     return rede;
 }
 
+DescrConexoes cria_descr_conex(){
+    DescrConexoes dc;
+    dc.prim = NULL;
+    dc.ult  = NULL;
+    dc.quant_conex = 0;
+    return dc;
+}
+
 Personagem cria_personagem(){
     Personagem p;
     printf("Informe o nome do personagem [até %d caracteres]: ", MAX_NOME);
@@ -184,6 +208,22 @@ Personagem cria_personagem(){
     scanf("%hu", &p.idade);
     
     return p;
+}
+
+PersonagNodo *cria_nodo_pers(Personagem p){
+    PersonagNodo *p_novop;
+    p_novop = (PersonagNodo*)malloc(sizeof(PersonagNodo)); 
+    p_novop->id_personagem = -1; 
+    p_novop->desc_conexoes.prim = NULL;
+    p_novop->desc_conexoes.ult = NULL;
+    p_novop->desc_conexoes.quant_conex = 0;
+    p_novop->prox = NULL;
+    p_novop->info = p;
+    return p_novop;
+}
+
+void limpa_rede_rd(RedeConexao *rd){
+    while(remove_personagem_rd(rd,rd->raiz));
 }
  
 bool ler_texto_stdin(char buffer[]){
@@ -207,75 +247,66 @@ bool ler_texto_stdin(char buffer[]){
     return true;
 }
 
-
-
-bool adiciona_personagem_rd(RedeConexao *rd, Personagem pers){
-    PersonagNodo *p_novop;
+bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto){
     if(rd == NULL)
         return false;
-
-    p_novop = (PersonagNodo*)malloc(sizeof(PersonagNodo)); 
-    p_novop->id_personagem = rd->proximo_id++; //incrementa após uso
-    p_novop->desc_conexoes.prim = NULL;
-    p_novop->desc_conexoes.ult = NULL;
-    p_novop->desc_conexoes.quant_conex = 0;
-    p_novop->prox = NULL;
-    p_novop->info = pers;
-    
+    if(id_auto)
+        pers->id_personagem = rd->proximo_id++; //incrementa após uso
 
     if(rd->quant_personagens == 0){
-        rd->raiz = rd->ult_nodo =  p_novop;
+        rd->raiz = pers;
     } else{
         if(rd->quant_personagens == 1){
-            rd->raiz->prox = p_novop;
+            rd->raiz->prox = pers;
         } else {
-            rd->ult_nodo->prox = p_novop;
+            rd->ult_nodo->prox = pers;
         }
-        rd->ult_nodo = p_novop;
     }
+    rd->ult_nodo = pers;
 
     rd->quant_personagens++;
     return true;    
 }
 
-bool atualiza_conexao_rd(PersonagNodo *orig, PersonagNodo *dest, unsigned int peso, bool atualiza){
+bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsigned int peso, bool atualiza){
     ConexaoBusc conexb;
       
-    if(orig == NULL|| dest == NULL){
+    if(dest == NULL){
         return false;
     }
 
-    conexb = busca_conex(dest->id_personagem, orig->desc_conexoes);
-
+    conexb = busca_conex(dest->id_personagem, *desc_conexoes);
     if(!conexb.encontrado){
         conexb.buscado = (Conexao*)malloc(sizeof(Conexao));
         conexb.buscado->personagem    = dest;
         conexb.buscado->prox_conexao  = NULL;
+        conexb.buscado->peso = PESO_NORMAL;
 
-        if(orig->desc_conexoes.quant_conex == 0){
-            orig->desc_conexoes.prim = orig->desc_conexoes.ult = conexb.buscado;
+        if(desc_conexoes->quant_conex == 0){
+            desc_conexoes->prim = desc_conexoes->ult = conexb.buscado;
         } else {
-            if (orig->desc_conexoes.quant_conex == 1){
-                orig->desc_conexoes.prim->prox_conexao = orig->desc_conexoes.ult;
+            if (desc_conexoes->quant_conex == 1){
+                desc_conexoes->prim->prox_conexao = conexb.buscado;
             } else {
-                orig->desc_conexoes.ult->prox_conexao = conexb.buscado;
+                desc_conexoes->ult->prox_conexao = conexb.buscado;
             }
-            orig->desc_conexoes.ult = conexb.buscado;
+            desc_conexoes->ult = conexb.buscado;
         }
 
-        orig->desc_conexoes.quant_conex++;
+        desc_conexoes->quant_conex++;
     }
-    if(atualiza)
-        conexb.buscado->peso = conexb.buscado->peso + peso;
-    else    
-        conexb.buscado->peso = peso;
-
+    if(atualiza){
+        conexb.buscado->peso = conexb.buscado->peso + peso >= 0 ? conexb.buscado->peso + peso : 0;
+    }else{    
+        conexb.buscado->peso = peso;    
+    }
+    if(conexb.buscado->peso > 100)
+        conexb.buscado->peso = 100;
     return true;
 }
 
 PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd){
     PersonagBuscado pb;
-
     pb.pai        = NULL;
     pb.buscado    = rd->raiz;
     pb.encontrado = false;
@@ -310,35 +341,35 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p){
     return cb;
 }
 
-bool remove_conexao_rd(PersonagNodo *orig, PersonagNodo *remov){
-    if(orig == NULL || remov == NULL)
+bool remove_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *remov){
+    if(remov == NULL)
         return false;    
-    else if(orig->desc_conexoes.quant_conex == 0)
+    else if(desc_conexoes->quant_conex == 0)
         return false;
 
-    ConexaoBusc cb = busca_conex(remov->id_personagem, orig->desc_conexoes); 
+    ConexaoBusc cb = busca_conex(remov->id_personagem, *desc_conexoes); 
     
 
-    if(orig->desc_conexoes.quant_conex == 1){   
-        orig->desc_conexoes.prim = orig->desc_conexoes.ult = NULL;
+    if(desc_conexoes->quant_conex == 1){   
+        desc_conexoes->prim = desc_conexoes->ult = NULL;
     }else if(cb.pai == NULL){// removendo primeiro item da lista
-        orig->desc_conexoes.prim = cb.buscado->prox_conexao;
+        desc_conexoes->prim = cb.buscado->prox_conexao;
 
-        if(orig->desc_conexoes.quant_conex == 2)
-            orig->desc_conexoes.ult = orig->desc_conexoes.prim;
+        if(desc_conexoes->quant_conex == 2)
+            desc_conexoes->ult = desc_conexoes->prim;
     }
     else{
         cb.pai->prox_conexao = cb.buscado->prox_conexao;
 
-        if(cb.buscado == orig->desc_conexoes.ult)
-            orig->desc_conexoes.ult = cb.pai;
+        if(cb.buscado == desc_conexoes->ult)
+            desc_conexoes->ult = cb.pai;
 
-        if(orig->desc_conexoes.quant_conex == 2)
-            orig->desc_conexoes.prim = orig->desc_conexoes.ult;    
+        if(desc_conexoes->quant_conex == 2)
+            desc_conexoes->prim = desc_conexoes->ult;    
     }
 
     free(cb.buscado);
-    orig->desc_conexoes.quant_conex--;
+    desc_conexoes->quant_conex--;
     return true;
 }
 
@@ -351,12 +382,12 @@ bool remove_personagem_rd(RedeConexao *rd, PersonagNodo *p){
     if(rd->quant_personagens == 0)
         return false;    
 
-    pai = busca_personag(p->id_personagem, rd).pai;   
+    pai = busca_personag(p->id_personagem, rd).pai; 
     // remover conexões dos outros personagens APONTANDO para ele
     aux = rd->raiz;
     while(aux != NULL){
         if(aux->id_personagem != p->id_personagem){
-            remove_conexao_rd(aux, p);
+            remove_conexao_rd(&aux->desc_conexoes, p);
         }
         aux = aux->prox;
     }
@@ -381,7 +412,6 @@ bool remove_personagem_rd(RedeConexao *rd, PersonagNodo *p){
     // liberar as conexões dele
     Conexao *c = p->desc_conexoes.prim;
     Conexao *tmp;
-
     while(c != NULL){
         tmp = c->prox_conexao;
         free(c);
@@ -419,7 +449,7 @@ bool exibir_rede(RedeConexao *rd) {
                        c->peso);
                 c = c->prox_conexao;
             }
-            printf("\n");
+            printf("\n\n");
         }
 
         p = p->prox;
@@ -564,35 +594,61 @@ void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao){
     if(receptor == NULL)
         return;
 
+    RedeConexao pers_informados = cria_rede();
+    DetalhesAcao detalhes;
+    detalhes.acao = acao;
+    detalhes.emissor = emissor;
+    detalhes.receptor = receptor;
+    detalhes.pers_informados = &pers_informados;
+
     int peso;
     if(acao == ACAO_ELOGIO){
         peso = 10;
     } else {
         peso = -10;
-    } 
-    atualiza_conexao_rd(receptor, emissor, peso, true); 
-    propaga_acao(emissor, receptor, acao, PROF_PRIM_RECEPTOR);
+    }
+    
+    atualiza_conexao_rd(&(receptor->desc_conexoes), emissor, peso, true); 
+
+    adiciona_personagem_rd(&pers_informados, cria_nodo_pers(emissor->info), false); 
+    adiciona_personagem_rd(&pers_informados, cria_nodo_pers(receptor->info), false); 
+    propaga_acao(detalhes, receptor, PROF_PRIM_RECEPTOR);
+
+    limpa_rede_rd(&pers_informados);
 }
 
-void propaga_acao(PersonagNodo *emissor_orig, PersonagNodo *emissor, TipoAcao acao, int profundidade){
-    if(emissor_orig == NULL)
+void propaga_acao(DetalhesAcao detalhes, PersonagNodo *emissor, int profundidade){
+    if(detalhes.emissor == NULL)
         return; 
 
     Conexao *caux = emissor->desc_conexoes.prim;
     while(caux != NULL){
+        if(caux->personagem == detalhes.emissor || caux->personagem == detalhes.receptor){
+            goto PROXIMO;
+        }
+
         if(caux->peso >= 50){
             float chance_distancia = 1.0f / profundidade;
             float chance_peso = (float)caux->peso / 100.0f; // normalizar de 100 para 1.0
             float chance_tot  = chance_distancia * chance_peso;
             float r = rand() / (float)RAND_MAX; // numero entre 0.0 e 1.0
-            if(r < chance_tot){
-                int peso_base = acao == ACAO_ELOGIO ? 10 : -10;
+            if(r <= chance_tot){
+                printf("%s[%d] contou sobre a ação de %s[%d] para %s[%d]...\n", 
+                    emissor->info.nome, emissor->id_personagem,
+                    detalhes.emissor->info.nome, detalhes.emissor->id_personagem,
+                    caux->personagem->info.nome, caux->personagem->id_personagem);
+                int peso_base = detalhes.acao == ACAO_ELOGIO ? 10 : -10;
 
-                atualiza_conexao_rd(caux->personagem, emissor_orig, peso_base / profundidade, true);
-                propaga_acao(emissor_orig, caux->personagem, acao, profundidade+1);
+                atualiza_conexao_rd(&caux->personagem->desc_conexoes, detalhes.emissor, peso_base / profundidade, true);
+
+                if(!busca_personag(caux->personagem->id_personagem, detalhes.pers_informados).encontrado){
+                    adiciona_personagem_rd(detalhes.pers_informados, cria_nodo_pers(caux->personagem->info), false); 
+                    propaga_acao(detalhes, caux->personagem, profundidade+1);
+                }
+                
             }
         }
-
+        PROXIMO:
         caux = caux->prox_conexao;
     }
 }
@@ -608,7 +664,7 @@ DetalhesTeste test(){
 
     //validando primeira inserção e input
     printf("TESTANDO PRIMEIRA INSERÇÃO...");
-    adiciona_personagem_rd(&rd, per);
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
 
@@ -616,7 +672,7 @@ DetalhesTeste test(){
     printf("TESTANDO SEGUNDA INSERÇÃO...");
     per.idade = 200;
     strncpy(per.nome, "teste\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, per);
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);        
@@ -624,7 +680,7 @@ DetalhesTeste test(){
     printf("TESTANDO TERCEIRA INSERÇÃO...");
     per.idade = 199;
     strncpy(per.nome, "teste3\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, per);
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
@@ -632,7 +688,7 @@ DetalhesTeste test(){
     printf("TESTANDO QUARTA INSERÇÃO...");
     per.idade = 198;
     strncpy(per.nome, "teste4\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, per);
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
@@ -640,7 +696,7 @@ DetalhesTeste test(){
     printf("TESTANDO QUINTA INSERÇÃO...");
     per.idade = 197;
     strncpy(per.nome, "teste5\0", MAX_NOME);
-    adiciona_personagem_rd(&rd, per);
+    adiciona_personagem_rd(&rd, cria_nodo_pers(per), true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
@@ -648,19 +704,31 @@ DetalhesTeste test(){
     //inserção conexão......................
 
     printf("CONECTANDO PRIMEIRO E 3o PERSONAGEM...");
-    atualiza_conexao_rd(rd.raiz, rd.raiz->prox->prox, 20, false);
+    atualiza_conexao_rd(&rd.raiz->desc_conexoes, rd.raiz->prox->prox, 200, false);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.raiz->desc_conexoes, rd.raiz->prox->prox->id_personagem, 20, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
     printf("CONECTANDO 3o E PRIMEIRO PERSONAGEM...");
-    atualiza_conexao_rd(rd.raiz->prox->prox, rd.raiz , 33, false);
+    atualiza_conexao_rd(&rd.raiz->prox->prox->desc_conexoes, rd.raiz , 830, false);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.raiz->prox->prox->desc_conexoes, rd.raiz->id_personagem,33, true);  
     printa_suceso_erro(dt.erro, erro_prev);
 
+    printf("CONECTANDO 3o E 2o PERSONAGEM...");
+    atualiza_conexao_rd(&rd.raiz->prox->prox->desc_conexoes, rd.raiz->prox , 830, false);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.raiz->prox->prox->desc_conexoes, rd.raiz->prox->id_personagem,33, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("CONECTANDO 2o E 3o PERSONAGEM...");
+    atualiza_conexao_rd(&rd.raiz->prox->desc_conexoes, rd.raiz->prox->prox , 830, false);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_conex_geral(&rd, dt, rd.raiz->prox->desc_conexoes, rd.raiz->prox->prox->id_personagem,33, true);  
+    printa_suceso_erro(dt.erro, erro_prev);
+
     printf("CONECTANDO ULT E PRIMEIRO PERSONAGEM...");
-    atualiza_conexao_rd(rd.ult_nodo, rd.raiz, 31, true);
+    atualiza_conexao_rd(&rd.ult_nodo->desc_conexoes, rd.raiz, 31, true);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, true);  
     printa_suceso_erro(dt.erro, erro_prev);
@@ -673,12 +741,26 @@ DetalhesTeste test(){
     dt.erro = !salvar_grafo_dot(&rd, "teste");
     if(dt.erro)
         snprintf(dt.detalhes_erro, MAX_ERRO, "Erro ao salvar arquivo. Erro: %d", errno);
+
     printa_suceso_erro(dt.erro, erro_prev);
+
+
+    //exibir e ações .....
+
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
+    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
+    exibir_rede(&rd);
 
     //remoção conexao ........................
 
     printf("REMOVENDO CONEXAO ENTRE ULT E PRIM...");
-    remove_conexao_rd(rd.ult_nodo, rd.raiz);
+    remove_conexao_rd(&rd.ult_nodo->desc_conexoes, rd.raiz);
     erro_prev = erro_prev || dt.erro;
     dt = testar_conex_geral(&rd, dt, rd.ult_nodo->desc_conexoes, rd.raiz->id_personagem,31, false);  
     printa_suceso_erro(dt.erro, erro_prev);
@@ -763,12 +845,13 @@ DetalhesTeste testar_ligamento_grafo(RedeConexao *rd, DetalhesTeste dt){
         dt = testar_integr_conex_personag(rd, dt, p_aux->desc_conexoes);
         if(dt.erro)
             break;    
-
         if(i < rd->quant_personagens){
             p_aux = p_aux->prox;
+        } else if(p_aux->prox != NULL) {
+            snprintf(dt.detalhes_erro, MAX_ERRO, "O próximo personagem do ÚLTIMO não é NULL (quando deveria ser)");
+            return dt;
         }
     }
-
     if(p_aux->id_personagem != rd->ult_nodo->id_personagem && !dt.erro){
         strcpy(dt.detalhes_erro, "Último personagem do descritor não foi atualizado");
         dt.erro = true;
