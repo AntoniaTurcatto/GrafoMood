@@ -19,7 +19,6 @@ Observações:
 #include <string.h>
 #include <stdbool.h>
 #include <errno.h>
-#include<unistd.h>
 
 #define MAX_NOME 75
 #define MAX_ERRO 100
@@ -54,6 +53,7 @@ typedef struct PERS_NODO{
     Personagem info;
     struct PERS_NODO *prox;//proximo da lista de adjacencia
     DescrConexoes desc_conexoes;
+    bool visitado; //variavel auxiliar para dfs/bfs
 }PersonagNodo;
 
 /// Caso exista apenas um personagem: ult_nodo == prim
@@ -98,6 +98,8 @@ RedeConexao cria_rede();
 
 void limpa_rede_rd(RedeConexao *rd);
 
+void desvisita_todos(RedeConexao *rd);
+
 DescrConexoes cria_descr_conex();
 
 /// Adiciona personagem ao grafo, manipulando seu id conforme argumento
@@ -113,6 +115,9 @@ PersonagNodo *cria_nodo_pers(Personagem p);
 
 ///função para ler input textual do stdin tratando suas vulnerabilidades inerentes.
 bool ler_texto_stdin(char buffer[]);
+
+///função para garantir que o buffer seja limpo após scanf
+void safe_scanf(const char *fmt, void *var);
 
 /// Função para buscar o pai de um personagem e se esse personagem existe na rede
 PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd);
@@ -130,7 +135,7 @@ bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio);
 /// função para exibir DFS
 bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio);
 
-void dfs_rec(PersonagNodo *p, bool visitado[]);
+void dfs_rec(PersonagNodo *p);
 
 int run();
 DetalhesTeste test();
@@ -145,6 +150,8 @@ DetalhesTeste testar_integr_conex_personag(RedeConexao *rd, DetalhesTeste dt, De
 
 /// Verifica se existe a conexão entre personagem x a personagem y, com peso z
 DetalhesTeste testar_conex_entre_pers(DetalhesTeste dt, DescrConexoes dc, int id_pers_conexao, int peso, bool deve_existir_conex);
+
+DetalhesTeste testar_remocao_intercal(DetalhesTeste dt, bool erro_prev, RedeConexao *rd);
 
 void printa_suceso_erro(bool erro, bool erro_prev);
 
@@ -205,7 +212,7 @@ Personagem cria_personagem(){
     }
     
     printf("Informe a idade do personagem: ");
-    scanf("%hu", &p.idade);
+    safe_scanf("%hu", &p.idade);
     
     return p;
 }
@@ -219,16 +226,26 @@ PersonagNodo *cria_nodo_pers(Personagem p){
     p_novop->desc_conexoes.quant_conex = 0;
     p_novop->prox = NULL;
     p_novop->info = p;
+    p_novop->visitado = false;
     return p_novop;
 }
 
 void limpa_rede_rd(RedeConexao *rd){
     while(remove_personagem_rd(rd,rd->raiz));
 }
+
+void desvisita_todos(RedeConexao *rd){
+    PersonagNodo *pnod = rd->raiz;
+    while(pnod != NULL){
+        pnod->visitado = false;
+        pnod = pnod->prox;
+    }
+}
  
 bool ler_texto_stdin(char buffer[]){
     int c;
     size_t len; 
+
     if (fgets(buffer, MAX_NOME, stdin) == NULL) {
         buffer[0] = '\0';
         printf("\n");
@@ -247,11 +264,27 @@ bool ler_texto_stdin(char buffer[]){
     return true;
 }
 
+void safe_scanf(const char *fmt, void *var){
+    int c;
+    scanf(fmt, var);
+
+    while((c = getchar()) != '\n' && c != EOF);
+}
+
 bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto){
+    PersonagBuscado pb;
+
     if(rd == NULL)
         return false;
-    if(id_auto)
+
+    if(rd->quant_personagens == MAX_PERSONAGEM){
+        printf("Máximo de personagens atingido!\n");
+        return false;
+    }
+        
+    if(id_auto){
         pers->id_personagem = rd->proximo_id++; //incrementa após uso
+    }
 
     if(rd->quant_personagens == 0){
         rd->raiz = pers;
@@ -467,12 +500,11 @@ bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio) {
     if (!pb.encontrado)
         return false;
 
-    bool visitado[MAX_PERSONAGEM] = {false};
     PersonagNodo *fila[MAX_PERSONAGEM];
     int ini = 0, fim = 0;
 
-    fila[fim++] = pb.buscado;
-    visitado[pb.buscado->id_personagem] = true;
+    fila[fim++] = pb.buscado;//incrementa fim após 
+    pb.buscado->visitado = true;
 
     printf("=== BFS a partir de %u ===\n", id_inicio);
 
@@ -484,29 +516,27 @@ bool exibir_bfs(RedeConexao *rd, unsigned int id_inicio) {
         Conexao *c = atual->desc_conexoes.prim;
 
         while (c != NULL) {
-            unsigned int id_dest = c->personagem->id_personagem;
-            if (!visitado[id_dest]) {
+            if (!c->personagem->visitado) {
                 fila[fim++] = c->personagem;
-                visitado[id_dest] = true;
+                c->personagem->visitado = true;
             }
 
             c = c->prox_conexao;
         }
     }
-
+    desvisita_todos(rd);
     return true;
 }
 
-void dfs_rec(PersonagNodo *p, bool visitado[]) {
-    visitado[p->id_personagem] = true;
+void dfs_rec(PersonagNodo *p) {
+    p->visitado = true;
     printf("Visitando ID %d\n", p->id_personagem);
 
     Conexao *c = p->desc_conexoes.prim;
 
     while (c != NULL) {
-        unsigned int id_dest = c->personagem->id_personagem;
-        if (!visitado[id_dest]) {
-            dfs_rec(c->personagem, visitado);
+        if (!c->personagem->visitado) {
+            dfs_rec(c->personagem);
         }
         c = c->prox_conexao;
     }
@@ -520,12 +550,11 @@ bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio) {
     if (!pb.encontrado)
         return false;
 
-    bool visitado[MAX_PERSONAGEM] = {false};
-
     printf("=== DFS a partir de %u ===\n", id_inicio);
 
-    dfs_rec(pb.buscado, visitado);
+    dfs_rec(pb.buscado);
 
+    desvisita_todos(rd);
     return true;
 }
 
@@ -750,6 +779,13 @@ DetalhesTeste test(){
     realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
     exibir_rede(&rd);
 
+    
+    //testar caminhamento grafo..............
+
+    exibir_bfs(&rd, rd.raiz->id_personagem);
+    exibir_dfs(&rd, rd.raiz->id_personagem);
+
+
     //remoção conexao ........................
 
     printf("REMOVENDO CONEXAO ENTRE ULT E PRIM...");
@@ -779,6 +815,9 @@ DetalhesTeste test(){
     dt = testar_ligamento_grafo(&rd, dt);
     printa_suceso_erro(dt.erro, erro_prev);
 
+    exibir_bfs(&rd, rd.raiz->id_personagem);
+    exibir_dfs(&rd, rd.raiz->id_personagem);
+
     printf("TESTANDO REMOÇÃO DA RAIZ...");
     remove_personagem_rd(&rd, rd.raiz);
     erro_prev = erro_prev || dt.erro;
@@ -799,6 +838,9 @@ DetalhesTeste test(){
     }
     printa_suceso_erro(dt.erro, erro_prev);
 
+    printf("TESTANDO INSERÇÃO E REMOÇÃO INTERCALADAS...");
+    RedeConexao rd2 = cria_rede();
+    dt = testar_remocao_intercal(dt, erro_prev, &rd2);
     return dt;
 }
 
@@ -931,6 +973,81 @@ DetalhesTeste testar_conex_entre_pers(DetalhesTeste dt, DescrConexoes dc, int id
     return dt;
 }
 
+DetalhesTeste testar_remocao_intercal(DetalhesTeste dt, bool erro_prev, RedeConexao *rd){
+    Personagem per = cria_personagem();
+
+    printf("TESTANDO PRIMEIRA INSERÇÃO (intercal)...");
+    adiciona_personagem_rd(rd, cria_nodo_pers(per), true);
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    //validando demais inserção
+    printf("TESTANDO SEGUNDA INSERÇÃO (intercal)...");
+    per.idade = 200;
+    strncpy(per.nome, "teste\0", MAX_NOME);
+    adiciona_personagem_rd(rd, cria_nodo_pers(per), true);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);  
+    
+    printf("TESTANDO REMOÇÃO DE 1° ELEMENTO (intercal)...");
+    remove_personagem_rd(rd, rd->raiz);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO TERCEIRA INSERÇÃO (intercal)...");
+    per.idade = 199;
+    strncpy(per.nome, "teste3\0", MAX_NOME);
+    adiciona_personagem_rd(rd, cria_nodo_pers(per), true);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DE ULT ELEMENTO (intercal)...");
+    remove_personagem_rd(rd, rd->ult_nodo);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DE 2° ELEMENTO (intercal)...");
+    remove_personagem_rd(rd, rd->raiz->prox);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO QUARTA INSERÇÃO (intercal)...");
+    per.idade = 198;
+    strncpy(per.nome, "teste4\0", MAX_NOME);
+    adiciona_personagem_rd(rd, cria_nodo_pers(per), true);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO QUINTA INSERÇÃO (intercal)...");
+    per.idade = 197;
+    strncpy(per.nome, "teste5\0", MAX_NOME);
+    adiciona_personagem_rd(rd, cria_nodo_pers(per), true);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DE ULT ELEMENTO (intercal)...");
+    remove_personagem_rd(rd, rd->ult_nodo);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    printf("TESTANDO REMOÇÃO DE RAIZ (intercal)...");
+    remove_personagem_rd(rd, rd->raiz->prox);
+    erro_prev = erro_prev || dt.erro;
+    dt = testar_ligamento_grafo(rd, dt);
+    printa_suceso_erro(dt.erro, erro_prev);
+
+    limpa_rede_rd(rd);
+
+    return dt;
+}
 
 
 void printa_suceso_erro(bool erro, bool erro_prev){
