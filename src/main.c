@@ -342,15 +342,16 @@ ConexaoBusc busca_conex(unsigned int id, DescrConexoes p){
 }
 
 bool remove_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *remov){
-    if(remov == NULL)
+    if(remov == NULL || desc_conexoes == NULL){
         return false;    
-    else if(desc_conexoes->quant_conex == 0)
+    }else if(desc_conexoes->quant_conex == 0)
         return false;
 
     ConexaoBusc cb = busca_conex(remov->id_personagem, *desc_conexoes); 
-    
+    if(!cb.encontrado)
+        return false;
 
-    if(desc_conexoes->quant_conex == 1){   
+    if(desc_conexoes->quant_conex == 1){ 
         desc_conexoes->prim = desc_conexoes->ult = NULL;
     }else if(cb.pai == NULL){// removendo primeiro item da lista
         desc_conexoes->prim = cb.buscado->prox_conexao;
@@ -746,14 +747,6 @@ DetalhesTeste test(){
 
 
     //exibir e ações .....
-
-    exibir_rede(&rd);
-    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
-    exibir_rede(&rd);
-    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
-    exibir_rede(&rd);
-    realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
-    exibir_rede(&rd);
     realiza_acao(rd.ult_nodo, rd.raiz, ACAO_INSULTO);
     exibir_rede(&rd);
 
