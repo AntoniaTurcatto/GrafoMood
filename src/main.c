@@ -310,13 +310,13 @@ bool menu_atualiza_conex(RedeConexao *rd){
     int peso;
 
     printf("Personagem de onde partirá a conexão (que irá conhecer o outro personagem):\n");
-    pnod = menu_selec_pers(&rd);
+    pnod = menu_selec_pers(rd);
     if(pnod == NULL){
         printf("Personagem inexistente\n");
         return false;
     }
     printf("Personagem a ser conectado:\n");
-    pnod2 = menu_selec_pers(&rd);
+    pnod2 = menu_selec_pers(rd);
     if(pnod2 == NULL){
         printf("Personagem inexistente\n");
         return false;
@@ -334,13 +334,13 @@ bool menu_atualiza_conex(RedeConexao *rd){
 bool menu_remove_conex(RedeConexao *rd){
     PersonagNodo *pnod, *pnod2;
     printf("Personagem de onde parte a conexão:\n");
-    pnod = menu_selec_pers(&rd);
+    pnod = menu_selec_pers(rd);
     if(pnod == NULL){
         printf("Personagem inexistente\n");
         return false;
     }
     printf("Personagem a ser desconectado:\n");
-    pnod2 = menu_selec_pers(&rd);
+    pnod2 = menu_selec_pers(rd);
     if(pnod2 == NULL){
         printf("Personagem inexistente\n");
         return false;
