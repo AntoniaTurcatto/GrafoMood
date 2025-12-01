@@ -157,6 +157,8 @@ void printa_suceso_erro(bool erro, bool erro_prev);
 
 bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo);
 
+bool carrega_grafo_rd(RedeConexao *rd, const char *nomeArquivo);
+
 void realiza_acao(PersonagNodo *emissor, PersonagNodo *receptor, TipoAcao acao);
 
 void propaga_acao(DetalhesAcao detalhes, PersonagNodo *emissor, int profundidade);
@@ -1112,5 +1114,90 @@ bool salvar_grafo_dot(RedeConexao *rd, const char *nomeArquivo) {
 
     fprintf(arq, "}\n");
     fclose(arq);
+    return true;
+}
+
+bool carrega_grafo_rd(RedeConexao *rd, const char *nome_arquivo) {
+    if (rd == NULL) return false;
+
+    limpa_rede_rd(rd); // limpa o grafo atual
+
+    char caminho[512];
+    snprintf(caminho, sizeof(caminho), "%s.dot", nome_arquivo);
+
+    FILE *arq = fopen(caminho, "r");
+    if (!arq) {
+        perror("Erro ao abrir arquivo DOT");
+        return false;
+    }
+
+    char linha[512];
+    unsigned int id_lido;
+    char nome_lido[MAX_NOME];
+    unsigned short idade_lida;
+
+    // mapa simples ID -> nodo
+    PersonagNodo *mapa[MAX_PERSONAGEM] = {NULL};
+
+    //PASSAGEM PARA LER NÓS
+    while (fgets(linha, sizeof(linha), arq)) {
+   
+        if (sscanf(linha, " %u [label=\"%[^(\"] (%hu)\"];", 
+                   &id_lido, nome_lido, &idade_lida) == 3) 
+        {
+            Personagem p;
+            // Copiar string 
+            strncpy(p.nome, nome_lido, MAX_NOME - 1);
+            p.nome[MAX_NOME - 1] = '\0';
+            p.idade = idade_lida;
+
+            PersonagNodo *novo = cria_nodo_pers(p);
+            novo->id_personagem = id_lido;
+
+            adiciona_personagem_rd(rd, novo, false);
+
+            if (id_lido < MAX_PERSONAGEM)
+                mapa[id_lido] = novo;
+        }
+    }
+
+
+    // LER ARESTAS
+    rewind(arq); // voltar ao início do arquivo
+
+    unsigned int origem, destino;
+    int peso;
+
+    while (fgets(linha, sizeof(linha), arq)) {
+       
+        if (sscanf(linha, " %u -> %u [label=\"%d\"];", &origem, &destino, &peso) == 3) 
+        {
+            // Validação básica
+            if (origem < MAX_PERSONAGEM &&
+                destino < MAX_PERSONAGEM &&
+                mapa[origem] != NULL &&
+                mapa[destino] != NULL &&
+                peso >= 0)
+            {
+                atualiza_conexao_rd(
+                    &(mapa[origem]->desc_conexoes),
+                    mapa[destino],
+                    peso,
+                    false
+                );
+            }
+        }
+    }
+
+    fclose(arq);
+
+    // Ajustar proximo_id
+    int maior_id = -1;
+    for (PersonagNodo *aux = rd->raiz; aux != NULL; aux = aux->prox) {
+        if (aux->id_personagem > maior_id)
+            maior_id = aux->id_personagem;
+    }
+    rd->proximo_id = maior_id + 1;
+
     return true;
 }
