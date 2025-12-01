@@ -27,6 +27,10 @@ Observações:
 #define NA_ALCANCADO -1
 #define PROF_PRIM_RECEPTOR 1
 #define PESO_NORMAL 50
+#define CANCELAR_OP_MENU 0
+
+///Macro para validação de NOTNULL
+#define ISNULL(xxxxp) (xxxxp != NULL) 
 
 typedef struct{
     char nome[MAX_NOME];
@@ -138,6 +142,12 @@ bool exibir_dfs(RedeConexao *rd, unsigned int id_inicio);
 void dfs_rec(PersonagNodo *p);
 
 int run();
+int menu_ini();
+void menu_acoes(RedeConexao *rd);
+PersonagNodo *menu_selec_pers(RedeConexao *rd);
+bool menu_atualiza_conex(RedeConexao *rd);
+bool menu_remove_conex(RedeConexao *rd);
+
 DetalhesTeste test();
 
 DetalhesTeste testar_ligamento_grafo(RedeConexao *rd, DetalhesTeste dt);
@@ -186,7 +196,157 @@ int main(int argc, char **argv){
 }
 
 int run(){
+    RedeConexao rd = cria_rede();
+
+    printf(" == GRAFOMOOD ==\n"
+    "Escolha uma opção:\n");
+    
+    int opc_menu_ini = menu_ini();
+    while(opc_menu_ini != CANCELAR_OP_MENU){
+        switch(opc_menu_ini){
+        case 1:
+            adiciona_personagem_rd(&rd, cria_nodo_pers(cria_personagem()), true);
+            break;
+        case 2:
+            if (remove_personagem_rd(&rd, menu_selec_pers(&rd)))
+                printf("Personagem removido com sucesso\n");
+            else    
+                printf("Erro ao remover pesonagem\n");
+            break;
+        case 3:
+            if(menu_atualiza_conex(&rd)){
+                printf("Conexão atualizada ou criada com sucesso\n");
+            } else {
+                printf("Erro ao atualizar ou criar conexão\n");
+            }
+            break;
+        case 4:
+            if(menu_remove_conex(&rd)){
+                printf("Conexão removida com sucesso\n");
+            } else {
+                printf("Erro ao remover conexão\n");
+            }
+            break;
+        case 5:
+            menu_ini();
+            break;
+        default:
+            printf("Opção inválida\n");
+        }
+
+        opc_menu_ini = menu_ini();
+    }
     return 0;
+}
+
+int menu_ini(){
+    int opc;
+    printf("1. Adicionar personagem\n"
+           "2. Remover personagem\n"
+           "3. Atualizar/criar conexão\n"
+           "4. Remover conexão\n"
+           "5. Realizar ações entre personagens\n"
+           "0. Sair\n");
+    safe_scanf("%d", &opc);
+    return opc;
+}
+
+void menu_acoes(RedeConexao *rd){
+    PersonagNodo *pnod, *pnod2;
+    TipoAcao acao;
+    int opc, opacao;
+    
+    //loop infinito, feito desta forma para evitar repetir reescrita do printf
+    for(;;){
+        printf("1. Realizar nova ação\n"
+               "0. Voltar ao menu principal\n");
+        safe_scanf("%d", &opc);
+
+        if(opc == 0)
+            break;
+
+        if(opc != 1){
+            printf("Opção inválida\n");
+            continue;
+        }    
+
+        pnod = menu_selec_pers(rd);
+        if(ISNULL(pnod))
+            continue;
+            
+        pnod2 = menu_selec_pers(rd);
+        if(ISNULL(pnod2))
+            continue;    
+
+        printf("\nAção a ser realizada:\n"
+        "1. Elogio\n"
+        "2. Insulto\n");
+        safe_scanf("%d", &opacao);    
+        if (opacao == 1){
+            acao = ACAO_ELOGIO;
+        } else if(opacao == 2){
+            acao = ACAO_INSULTO;
+        } else {
+            printf("Opção inválida\n");
+            continue;
+        }
+
+        realiza_acao(pnod, pnod2, acao);
+    }
+
+}
+
+PersonagNodo *menu_selec_pers(RedeConexao *rd){
+    int id;
+    PersonagBuscado pb;
+
+    printf("Informe o ID do personagem: ");
+    safe_scanf("%d", &id);
+    return busca_personag(id, rd).buscado;
+}
+
+bool menu_atualiza_conex(RedeConexao *rd){
+    PersonagNodo *pnod, *pnod2;
+    int peso;
+
+    printf("Personagem de onde partirá a conexão (que irá conhecer o outro personagem):\n");
+    pnod = menu_selec_pers(&rd);
+    if(pnod == NULL){
+        printf("Personagem inexistente\n");
+        return false;
+    }
+    printf("Personagem a ser conectado:\n");
+    pnod2 = menu_selec_pers(&rd);
+    if(pnod2 == NULL){
+        printf("Personagem inexistente\n");
+        return false;
+    }
+
+    printf("Peso da conexão do primeiro personagem para com o primero: \n"
+    "0   = ódio\n"
+    "50  = neutro\n"
+    "100 = amor\n");
+    safe_scanf("%d", &peso);
+
+    return atualiza_conexao_rd(&pnod->desc_conexoes, pnod2, peso, true);
+}
+
+bool menu_remove_conex(RedeConexao *rd){
+    PersonagNodo *pnod, *pnod2;
+    printf("Personagem de onde parte a conexão:\n");
+    pnod = menu_selec_pers(&rd);
+    if(pnod == NULL){
+        printf("Personagem inexistente\n");
+        return false;
+    }
+    printf("Personagem a ser desconectado:\n");
+    pnod2 = menu_selec_pers(&rd);
+    if(pnod2 == NULL){
+        printf("Personagem inexistente\n");
+        return false;
+    }
+
+    return remove_conexao_rd(&pnod->desc_conexoes, pnod2);
 }
 
 RedeConexao cria_rede(){
@@ -352,6 +512,9 @@ PersonagBuscado busca_personag(unsigned int id, RedeConexao *rd){
             pb.pai = pb.buscado;
             pb.buscado  = pb.buscado->prox;
         }
+    }
+    if(!pb.encontrado){
+        pb.buscado = pb.pai = NULL;
     }
     return pb;
 }
