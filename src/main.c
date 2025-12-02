@@ -349,7 +349,10 @@ bool menu_atualiza_conex(RedeConexao *rd){
     "100 = amor\n");
     safe_scanf("%d", &peso);
 
-    return atualiza_conexao_rd(&pnod->desc_conexoes, pnod2, peso, true);
+    printf("peso = %d", peso);
+    
+
+    return atualiza_conexao_rd(&pnod->desc_conexoes, pnod2, peso, false);
 }
 
 bool menu_remove_conex(RedeConexao *rd){
@@ -548,6 +551,7 @@ bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsig
 
         desc_conexoes->quant_conex++;
     }
+
     if(atualiza){
         conexb.buscado->peso = conexb.buscado->peso + peso >= 0 ? conexb.buscado->peso + peso : 0;
     }else{    
