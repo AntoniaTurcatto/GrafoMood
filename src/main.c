@@ -347,10 +347,7 @@ bool menu_atualiza_conex(RedeConexao *rd){
     "0   = ódio\n"
     "50  = neutro\n"
     "100 = amor\n");
-    safe_scanf("%d", &peso);
-
-    printf("peso = %d", peso);
-    
+    safe_scanf("%d", &peso);    
 
     return atualiza_conexao_rd(&pnod->desc_conexoes, pnod2, peso, false);
 }
