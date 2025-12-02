@@ -248,6 +248,34 @@ int run(){
             break;
         case 7:
             menu_exibir_grafo(&rd);
+            break;
+            
+        case 8: {
+        char nome[100];
+        printf("Informe o nome do arquivo para salvar (ex: grafo.dot): ");
+        ler_texto_stdin(nome);
+
+        if (salvar_grafo_dot(&rd, nome))
+            printf("Arquivo salvo com sucesso!\n");
+        else
+            printf("Erro ao salvar arquivo.\n");
+        break;
+    }
+        case 9: {
+        char nome[100];
+        printf("Informe o nome do arquivo para carregar: ");
+        ler_texto_stdin(nome);
+
+        if (carrega_grafo_rd(&rd, nome))
+            printf("Arquivo carregado com sucesso!\n");
+        else
+            printf("Erro ao carregar arquivo.\n");
+        break;
+    }
+        case 0:
+        printf("Saindo...\n");
+        break;
+            
         default:
             printf("Opção inválida\n");
         }
