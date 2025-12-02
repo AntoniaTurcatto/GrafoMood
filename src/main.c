@@ -4,13 +4,15 @@ Integrantes: AntoniaTurcatto, Tássia J. M. Machado, Kauany da Costa, Helen Muni
 Tema: Ligações entre Personagens
 Grafo orientado (pesos nas relações individualizadas)
 Tipo de representação usada: Lista de adjacência
-Percurso: BFS/DFS [a ver]
+Percurso: BFS e DFS
 Funcionalidades adicionais: 
     Salvar em arquivo .dot,
     Carregar grafo de arquivo, 
     Conexão entre dois vértices, 
     Ação modificadora de vínculo 
+    Propagaçaõ da ação, que afeta vínculos em cascata
 Observações:
+    link do repositório no GitHub: https://github.com/AntoniaTurcatto/GrafoMood
 */
 #include <stdio.h>
 #include <stdlib.h>
