@@ -29,9 +29,6 @@ Observações:
 #define PESO_NORMAL 50
 #define CANCELAR_OP_MENU 0
 
-///Macro para validação de NOTNULL
-#define ISNULL(xxxxp) (xxxxp != NULL) 
-
 typedef struct{
     char nome[MAX_NOME];
     unsigned short int idade;    
@@ -147,6 +144,7 @@ void menu_acoes(RedeConexao *rd);
 PersonagNodo *menu_selec_pers(RedeConexao *rd);
 bool menu_atualiza_conex(RedeConexao *rd);
 bool menu_remove_conex(RedeConexao *rd);
+void menu_exibir_grafo(RedeConexao *rd);
 
 DetalhesTeste test();
 
@@ -197,6 +195,7 @@ int main(int argc, char **argv){
 
 int run(){
     RedeConexao rd = cria_rede();
+    PersonagNodo *pnod, *pnod2;
 
     printf(" == GRAFOMOOD ==\n"
     "Escolha uma opção:\n");
@@ -228,8 +227,25 @@ int run(){
             }
             break;
         case 5:
-            menu_ini();
+            menu_acoes(&rd);
             break;
+        case 6:
+            pnod = menu_selec_pers(&rd);
+            if(pnod == NULL){
+                printf("Personagem inexistente\n");
+                break;
+            }
+
+            pnod2 = menu_selec_pers(&rd);
+            if(pnod2 == NULL){
+                printf("Personagem inexistente\n");
+                break;
+            }
+
+            imprime_vinculo_rd(&rd, pnod->id_personagem, pnod2->id_personagem);
+            break;
+        case 7:
+            menu_exibir_grafo(&rd);
         default:
             printf("Opção inválida\n");
         }
@@ -246,6 +262,10 @@ int menu_ini(){
            "3. Atualizar/criar conexão\n"
            "4. Remover conexão\n"
            "5. Realizar ações entre personagens\n"
+           "6. Imprimir vínculo entre personagens\n"
+           "7. Imprimir grafo\n"
+           "8. Salvar\n"
+           "9. Carregar\n"
            "0. Sair\n");
     safe_scanf("%d", &opc);
     return opc;
@@ -271,11 +291,11 @@ void menu_acoes(RedeConexao *rd){
         }    
 
         pnod = menu_selec_pers(rd);
-        if(ISNULL(pnod))
+        if(pnod == NULL)
             continue;
             
         pnod2 = menu_selec_pers(rd);
-        if(ISNULL(pnod2))
+        if(pnod2 == NULL)
             continue;    
 
         printf("\nAção a ser realizada:\n"
@@ -300,6 +320,7 @@ PersonagNodo *menu_selec_pers(RedeConexao *rd){
     int id;
     PersonagBuscado pb;
 
+    exibir_rede(rd);
     printf("Informe o ID do personagem: ");
     safe_scanf("%d", &id);
     return busca_personag(id, rd).buscado;
@@ -347,6 +368,42 @@ bool menu_remove_conex(RedeConexao *rd){
     }
 
     return remove_conexao_rd(&pnod->desc_conexoes, pnod2);
+}
+
+void menu_exibir_grafo(RedeConexao *rd){
+    int opc, id;
+    printf("\nExibição geral:\n");
+    exibir_rede(rd);
+    for (;;){
+        printf("Informe o modo de exibição a seguir:\n"
+        "1. Geral\n"
+        "2. A partir de um personagem (DFS)\n"
+        "3. A partir de um personagem (BFS)\n"
+        "0. Voltar ao menu principal\n");
+        safe_scanf("%d", &opc);
+
+        switch(opc){
+        case 0:
+            return;
+        case 1:
+            exibir_rede(rd);
+            break;
+        case 2:
+            printf("Informe o ID do personagem: ");
+            safe_scanf("%d", &id);
+
+            exibir_dfs(rd, id);
+            break;
+        case 3:
+            printf("Informe o ID do personagem: ");
+            safe_scanf("%d", &id);
+
+            exibir_bfs(rd, id);
+            break;
+        default:
+            printf("Opção inválida\n");
+        }
+    }   
 }
 
 RedeConexao cria_rede(){
@@ -431,6 +488,7 @@ void safe_scanf(const char *fmt, void *var){
     scanf(fmt, var);
 
     while((c = getchar()) != '\n' && c != EOF);
+    printf("\n");
 }
 
 bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto){
