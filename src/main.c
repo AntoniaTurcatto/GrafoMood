@@ -49,6 +49,7 @@ typedef struct{
     unsigned short int quant_conex;
     Conexao *prim;
     Conexao *ult;
+    bool ordenado;
 }DescrConexoes;
 
 typedef struct PERS_NODO{
@@ -147,6 +148,7 @@ PersonagNodo *menu_selec_pers(RedeConexao *rd);
 bool menu_atualiza_conex(RedeConexao *rd);
 bool menu_remove_conex(RedeConexao *rd);
 void menu_exibir_grafo(RedeConexao *rd);
+void carrega_rede_padrão(RedeConexao *rd);
 
 DetalhesTeste test();
 
@@ -198,6 +200,7 @@ int main(int argc, char **argv){
 int run(){
     RedeConexao rd = cria_rede();
     PersonagNodo *pnod, *pnod2;
+    char nome[100];
 
     printf(" == GRAFOMOOD ==\n"
     "Escolha uma opção:\n");
@@ -250,32 +253,29 @@ int run(){
             menu_exibir_grafo(&rd);
             break;
             
-        case 8: {
-        char nome[100];
-        printf("Informe o nome do arquivo para salvar (ex: grafo.dot): ");
-        ler_texto_stdin(nome);
+        case 8: 
+            printf("Informe o nome do arquivo para salvar (ex: grafo.dot): ");
+            ler_texto_stdin(nome);
 
-        if (salvar_grafo_dot(&rd, nome))
-            printf("Arquivo salvo com sucesso!\n");
-        else
-            printf("Erro ao salvar arquivo.\n");
-        break;
-    }
-        case 9: {
-        char nome[100];
-        printf("Informe o nome do arquivo para carregar: ");
-        ler_texto_stdin(nome);
+            if (salvar_grafo_dot(&rd, nome))
+                printf("Arquivo salvo com sucesso!\n");
+            else
+                printf("Erro ao salvar arquivo.\n");
+            break;
+    
+        case 9: 
+            printf("Informe o nome do arquivo para carregar: ");
+            ler_texto_stdin(nome);
 
-        if (carrega_grafo_rd(&rd, nome))
-            printf("Arquivo carregado com sucesso!\n");
-        else
-            printf("Erro ao carregar arquivo.\n");
-        break;
-    }
-        case 0:
-        printf("Saindo...\n");
-        break;
-            
+            if (carrega_grafo_rd(&rd, nome))
+                printf("Arquivo carregado com sucesso!\n");
+            else
+                printf("Erro ao carregar arquivo.\n");
+            break;
+
+        case 10:
+            carrega_rede_padrão(&rd);
+            break;
         default:
             printf("Opção inválida\n");
         }
@@ -287,15 +287,16 @@ int run(){
 
 int menu_ini(){
     int opc;
-    printf("1. Adicionar personagem\n"
-           "2. Remover personagem\n"
-           "3. Atualizar/criar conexão\n"
-           "4. Remover conexão\n"
-           "5. Realizar ações entre personagens\n"
-           "6. Imprimir vínculo entre personagens\n"
-           "7. Imprimir grafo\n"
-           "8. Salvar\n"
-           "9. Carregar\n"
+    printf("1.  Adicionar personagem\n"
+           "2.  Remover personagem\n"
+           "3.  Atualizar/criar conexão\n"
+           "4.  Remover conexão\n"
+           "5.  Realizar ações entre personagens\n"
+           "6.  Imprimir vínculo entre personagens\n"
+           "7.  Imprimir grafo\n"
+           "8.  Salvar\n"
+           "9.  Carregar\n"
+           "10. Montar grafo de exemplo\n"
            "0. Sair\n");
     safe_scanf("%d", &opc);
     return opc;
@@ -371,6 +372,9 @@ bool menu_atualiza_conex(RedeConexao *rd){
     if(pnod2 == NULL){
         printf("Personagem inexistente\n");
         return false;
+    } else if(pnod2->id_personagem == pnod->id_personagem){
+        printf("Personagem inválido: foi o selecionado o mesmo personagem duas vezes\n");
+        return false;
     }
 
     printf("Peso da conexão do primeiro personagem para com o primero: \n"
@@ -436,6 +440,33 @@ void menu_exibir_grafo(RedeConexao *rd){
     }   
 }
 
+void carrega_rede_padrão(RedeConexao *rd){
+    Personagem p;
+    p.idade = 20;
+    snprintf(p.nome, MAX_NOME, "Diegos");
+    adiciona_personagem_rd(rd, cria_nodo_pers(p), true);
+
+    p.idade = 90;
+    snprintf(p.nome, MAX_NOME, "Geraldina");
+    adiciona_personagem_rd(rd, cria_nodo_pers(p), true);
+
+    p.idade = 2;
+    snprintf(p.nome, MAX_NOME, "Alfredo");
+    adiciona_personagem_rd(rd, cria_nodo_pers(p), true);
+
+    p.idade = 70;
+    snprintf(p.nome, MAX_NOME, "Enza dos pagodes");
+    adiciona_personagem_rd(rd, cria_nodo_pers(p), true);
+
+    p.idade = 5;
+    snprintf(p.nome, MAX_NOME, "Marciano");
+    adiciona_personagem_rd(rd, cria_nodo_pers(p), true);
+
+    atualiza_conexao_rd(&rd->raiz->desc_conexoes, rd->ult_nodo, 90, false);
+    atualiza_conexao_rd(&rd->raiz->desc_conexoes, rd->raiz->prox, 0, false);
+    atualiza_conexao_rd(&rd->raiz->desc_conexoes, rd->raiz->prox->prox->prox, 90, false);
+}
+
 RedeConexao cria_rede(){
     RedeConexao rede;
     rede.quant_personagens = 0;
@@ -450,6 +481,7 @@ DescrConexoes cria_descr_conex(){
     dc.prim = NULL;
     dc.ult  = NULL;
     dc.quant_conex = 0;
+    dc.ordenado = true;
     return dc;
 }
 
@@ -553,6 +585,7 @@ bool adiciona_personagem_rd(RedeConexao *rd, PersonagNodo *pers, bool id_auto){
 
 bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsigned int peso, bool atualiza){
     ConexaoBusc conexb;
+    Conexao *aux, *pai = NULL;
       
     if(dest == NULL){
         return false;
@@ -568,12 +601,22 @@ bool atualiza_conexao_rd(DescrConexoes *desc_conexoes, PersonagNodo *dest, unsig
         if(desc_conexoes->quant_conex == 0){
             desc_conexoes->prim = desc_conexoes->ult = conexb.buscado;
         } else {
-            if (desc_conexoes->quant_conex == 1){
-                desc_conexoes->prim->prox_conexao = conexb.buscado;
-            } else {
-                desc_conexoes->ult->prox_conexao = conexb.buscado;
+
+            aux = desc_conexoes->prim;
+            while(aux != NULL && aux->peso > peso){
+                pai = aux;
+                aux = aux->prox_conexao;
             }
-            desc_conexoes->ult = conexb.buscado;
+            if (pai == NULL){
+                desc_conexoes->prim =conexb.buscado;
+            } else {
+                pai->prox_conexao = conexb.buscado;
+            }
+            conexb.buscado->prox_conexao = aux;
+
+            if(aux == NULL){
+                desc_conexoes->ult = conexb.buscado;
+            }
         }
 
         desc_conexoes->quant_conex++;
